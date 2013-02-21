@@ -58,7 +58,7 @@ jsnx.classes.Graph = function(opt_data, opt_attr) {
     }
 
     this['graph'] = {}; // dictionary for graph attributes
-    this['node'] = {};  // empty node dict (created before convert)
+//    this['node'] = {};  // empty node dict (created before convert)
     this['adj'] = {};   // empty adjacency dict
 
     // attempt to load grpah with data
@@ -90,13 +90,19 @@ jsnx.classes.Graph['__name__'] = 'Graph';
 jsnx.classes.Graph.prototype.graph = null;
 
 
+jsnx.classes.Graph.prototype.keyString = function(o){
+    return o.toString()
+}
+
 /**
- * Nde dict
+ * Node dict
  *
  * @type {!Object}
  * @export
  */
-jsnx.classes.Graph.prototype.node = null;
+jsnx.classes.Graph.prototype.node = function(n){
+    return this.node[this.keyString(n)]
+};
 
 
 /**
@@ -313,7 +319,7 @@ jsnx.classes.Graph.prototype.remove_node = function(n) {
 /**
  * Remove multiple nodes.
  *
- * @param {jsnx.NodeContainer} nodes A container of nodes 
+ * @param {jsnx.NodeContainer} nodes A container of nodes
  *      If a node in the container is not in the graph it is silently ignored.
  *
  * @export
@@ -952,7 +958,7 @@ jsnx.classes.Graph.prototype.clear = function() {
  * @export
  */
 jsnx.classes.Graph.prototype.copy = function() {
-    return jsnx.helper.deepcopy_instance(this); 
+    return jsnx.helper.deepcopy_instance(this);
 };
 
 
