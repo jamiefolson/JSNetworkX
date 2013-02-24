@@ -1,19 +1,19 @@
-"""
-Betweenness centrality measures for subsets of nodes.
-"""
-#    Copyright (C) 2004-2011 by 
-#    Aric Hagberg <hagberg@lanl.gov>
-#    Dan Schult <dschult@colgate.edu>
-#    Pieter Swart <swart@lanl.gov>
-#    All rights reserved.
-#    BSD license.
-__author__ = """Aric Hagberg (hagberg@lanl.gov)"""
+goog.provide('jsnx.algorithms.centrality.betweenness.subset')
 
-__all__ = ['betweenness_centrality_subset',
-           'edge_betweenness_centrality_subset',
-           'betweenness_centrality_source']
+goog.require('jsnx.algorithms.centrality.betweenness');
+goog.require('goog.structs.PriorityQueue');
+goog.require('goog.structs.Map');
+goog.require('goog.iter');
+goog.require('goog.math');
+goog.require('goog.json');
+goog.require('goog.object');
+goog.require('jsnx.convert');
+goog.require('jsnx.exception');
+goog.require('jsnx.helper');
 
-import networkx as nx
+/**
+ * Betweenness centrality measures for subsets of nodes.
+ */
 
 from networkx.algorithms.centrality.betweenness import\
     _single_source_dijkstra_path_basic as dijkstra
@@ -85,11 +85,11 @@ def betweenness_centrality_subset(G,sources,targets,
     ----------
     .. [1] Ulrik Brandes, A Faster Algorithm for Betweenness Centrality.
        Journal of Mathematical Sociology 25(2):163-177, 2001.
-       http://www.inf.uni-konstanz.de/algo/publications/b-fabc-01.pdf
+       http:// www.inf.uni-konstanz.de/algo/publications/b-fabc-01.pdf
     .. [2] Ulrik Brandes: On Variants of Shortest-Path Betweenness 
        Centrality and their Generic Computation. 
        Social Networks 30(2):136-145, 2008.
-       http://www.inf.uni-konstanz.de/algo/publications/b-vspbc-08.pdf
+       http:// www.inf.uni-konstanz.de/algo/publications/b-vspbc-08.pdf
     """
     b=dict.fromkeys(G,0.0) # b[v]=0 for v in G
     for s in sources:
@@ -164,11 +164,11 @@ def edge_betweenness_centrality_subset(G,sources,targets,
     ----------
     .. [1] Ulrik Brandes, A Faster Algorithm for Betweenness Centrality.
        Journal of Mathematical Sociology 25(2):163-177, 2001.
-       http://www.inf.uni-konstanz.de/algo/publications/b-fabc-01.pdf
+       http:// www.inf.uni-konstanz.de/algo/publications/b-fabc-01.pdf
     .. [2] Ulrik Brandes: On Variants of Shortest-Path Betweenness 
        Centrality and their Generic Computation. 
        Social Networks 30(2):136-145, 2008.
-       http://www.inf.uni-konstanz.de/algo/publications/b-vspbc-08.pdf
+       http:// www.inf.uni-konstanz.de/algo/publications/b-vspbc-08.pdf
 
     """
 

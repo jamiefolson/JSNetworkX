@@ -20,6 +20,7 @@ jsnx.Node;
 /** @typedef {(Object|goog.iter.Iterable)} */
 jsnx.NodeContainer;
 
+
 /*jshint expr:false*/
 
 /**
