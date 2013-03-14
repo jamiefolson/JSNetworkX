@@ -21,9 +21,9 @@ goog.require('jsnx.classes.HashMap');
  * Edges are represented as links between nodes with optional
  * key/value attributes.
  *
- * @see jsnx.Graph
- * @see jsnx.MultiGraph
- * @see jsnx.MultiDiGraph
+ * @see jsnx.classes.Graph
+ * @see jsnx.classes.MultiGraph
+ * @see jsnx.classes.MultiDiGraph
  *
  * @param {?=} opt_data 
  *      Data to initialize graph.  If data=None (default) an empty
@@ -39,7 +39,7 @@ goog.require('jsnx.classes.HashMap');
  *
  * var G = new jsnx.DiGraph(null, {name: 'test'});
  *
- * @extends jsnx.Graph
+ * @extends jsnx.classes.Graph
  * @constructor
  * @export
  */
@@ -62,7 +62,7 @@ jsnx.classes.DiGraph = function(opt_data, opt_attr) {
 
     //attempt to load graph with data
     if(goog.isDefAndNotNull(opt_data)) {
-        jsnx.convert.to_networkx_graph(opt_data,this);
+        jsnx.convert.to_networkx_graph(opt_data, this);
     }
 };
 goog.exportSymbol('jsnx.DiGraph', jsnx.classes.DiGraph);
@@ -338,7 +338,6 @@ jsnx.classes.DiGraph.prototype.predecessors = function(n) {
              'The node ' + n + ' is not in the digraph.'
         );
     }
-
     return this.pred(n).getKeys();
 };
 
@@ -430,13 +429,13 @@ jsnx.classes.DiGraph.prototype.adjacency_iter = function(opt_nbunch,
  * @see #edges_iter
  *
  * 
- * @param {jsnx.NodeContainer} opt_nbunch A container of nodes.
+ * @param {?jsnx.NodeContainer=} opt_nbunch A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {boolean} opt_data  
+ * @param {?boolean=} opt_data  
  *      If True, return edge attribute dict in 3-tuple (u,v,data).
  *
- * @return {goog.iter.Iterator} An iterator of (u,v) or (u,v,d) tuples of 
+ * @return {!goog.iter.Iterator} An iterator of (u,v) or (u,v,d) tuples of 
  *      incoming edges.
  *
  * @export
@@ -453,7 +452,7 @@ jsnx.classes.DiGraph.prototype.generate_edges_iter = function(opt_nbunch,
         opt_data, opt_pred, opt_succ) {
     // handle calls with opt_data being the only argument
     if (goog.isBoolean(opt_nbunch)) {
-        opt_data = opt_nbunch;
+        opt_data = /** @type {boolean} */ (opt_nbunch);
         opt_nbunch = null;
     }
     var include_pred = false, include_succ = true;
@@ -544,10 +543,10 @@ jsnx.classes.DiGraph.prototype.in_edges = function(opt_nbunch, opt_data) {
  * @see #out_degree_iter
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {(jsnx.Node|jsnx.NodeContainer)=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -557,7 +556,7 @@ jsnx.classes.DiGraph.prototype.in_edges = function(opt_nbunch, opt_data) {
  * name could be equal to a node name, nbunch as to be set to null explicitly
  * to use the second argument as weight attribute name.
  *
- * @return {goog.iter.Iterator}  The iterator returns two-tuples of (node, degree).
+ * @return {!goog.iter.Iterator}  The iterator returns two-tuples of (node, degree).
  *
  * @override
  * @export
@@ -577,10 +576,10 @@ jsnx.classes.DiGraph.prototype.degree_iter = function(opt_nbunch, opt_weight) {
  * @see #out_degree
  * @see #out_degree_iter
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {(jsnx.Node|jsnx.NodeContainer)=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -659,10 +658,10 @@ jsnx.classes.DiGraph.prototype.generate_degree_iter = function(opt_nbunch,
  * @see #out_degree
  * @see #in_degree_iter
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {jsnx.NodeContainer=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -690,10 +689,10 @@ jsnx.classes.DiGraph.prototype.out_degree_iter = function(opt_nbunch, opt_weight
  * @see #in_degree_iter
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {jsnx.NodeContainer=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -703,15 +702,16 @@ jsnx.classes.DiGraph.prototype.out_degree_iter = function(opt_nbunch, opt_weight
  * name could be equal to a node name, nbunch as to be set to null explicitly
  * to use the second argument as weight attribute name.
  *
- * @return {(number|Object}
+ * @return {(number|Object)}
  *       A dictionary with nodes as keys and in-degree as values or
  *       a number if a single node is specified.
  *
  * @export
  */
 jsnx.classes.DiGraph.prototype.in_degree = function(opt_nbunch, opt_weight) {
-    if(this.has_node(opt_nbunch)) { // return a single node
-        return this.in_degree_iter(opt_nbunch, opt_weight).next()[1];
+    if(goog.isDefAndNotNull(opt_nbunch) && this.has_node(opt_nbunch)) { 
+        // return a single node
+        return /** @type {number} */ (this.in_degree_iter(opt_nbunch, opt_weight).next()[1]);
     }
     else {
         var map = this.newNodeMap_();
@@ -731,10 +731,10 @@ jsnx.classes.DiGraph.prototype.in_degree = function(opt_nbunch, opt_weight) {
  * @see #in_degree_iter
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {jsnx.NodeContainer=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -744,15 +744,16 @@ jsnx.classes.DiGraph.prototype.in_degree = function(opt_nbunch, opt_weight) {
  * name could be equal to a node name, nbunch as to be set to null explicitly
  * to use the second argument as weight attribute name.
  *
- * @return {(number|Object}
+ * @return {(number|Object)}
  *       A dictionary with nodes as keys and in-degree as values or
  *       a number if a single node is specified.
  *
  * @export
  */
 jsnx.classes.DiGraph.prototype.out_degree = function(opt_nbunch, opt_weight) {
-    if(this.has_node(opt_nbunch)) { // return a single node
-        return this.out_degree_iter(opt_nbunch, opt_weight).next()[1];
+    if(goog.isDefAndNotNull(opt_nbunch) && this.has_node(opt_nbunch)) {
+        // return a single node
+        return /** @type {number} */ (this.out_degree_iter(opt_nbunch, opt_weight).next()[1]);
     }
     else {
         var map = this.newNodeMap_();
@@ -816,7 +817,7 @@ jsnx.classes.DiGraph.prototype.is_directed = function() {
  *      This is in contrast to the similar D = new DiGraph(G) which returns a
  *      shallow copy of the data.
  *
- * @return {jsnx.DiGraph} A deepcopy of the graph
+ * @return {!jsnx.classes.DiGraph} A deepcopy of the graph
  *
  * @override
  * @export
@@ -857,7 +858,7 @@ jsnx.classes.DiGraph.prototype.to_directed = function() {
  *      If True only keep edges that appear in both directions 
  *      in the original digraph. 
  *
- * @return {jsnx.Graph} 
+ * @return {!jsnx.classes.Graph} 
  *      An undirected graph with the same name and nodes and
  *      with edge (u,v,data) if either (u,v,data) or (v,u,data)
  *      is in the digraph.  If both edges exist in digraph and
@@ -907,7 +908,7 @@ jsnx.classes.DiGraph.prototype.to_undirected = function(opt_reciprocal) {
  *      If False, reverse the reverse graph is created using
  *      the original graph (this changes the original graph).
  *
- * @return {!jsnx.DiGraph} A copy of the graph or the graph itself
+ * @return {!jsnx.classes.DiGraph} A copy of the graph or the graph itself
  *
  * @export
  */
@@ -964,7 +965,7 @@ jsnx.classes.DiGraph.prototype.reverse = function(opt_copy) {
  * @param {jsnx.NodeContainer} nbunch  
  *      A container of nodes which will be iterated through once.
  *
- * @return {jsnx.DiGraph} A subgraph of the graph with the same edge attributes.
+ * @return {jsnx.classes.DiGraph} A subgraph of the graph with the same edge attributes.
  *
  *
  * @override

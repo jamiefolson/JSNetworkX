@@ -87,20 +87,23 @@ jsnx.classes.MultiDiGraph.prototype.add_node_impl= function(n, opt_attr_dict){
  *
  * @see #add_edges_from
  *
- * @param {(number|string)=} opt_key identifier
+ * @param {jsnx.Node} u
+ * @param {jsnx.Node} v
+ * @param {?(number|string)=} opt_key identifier
  *      Used to distinguish multiedges between a pair of nodes. Default is
  *      the lowest unused integer.
- * @param {Object} opt_attr_dict  Dictionary of edge attributes.  
+ * @param {?Object=} opt_attr_dict  Dictionary of edge attributes.  
  *      Key/value pairs will update existing data associated with the edge.
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_dict) {
     var datadict, keydict;
 
     if(goog.isDefAndNotNull(opt_key) && !(goog.isString(opt_key) || goog.isNumber(opt_key))) {
-        opt_attr_dict = opt_key;
+        opt_attr_dict = /** @type {Object} */ (opt_key);
         opt_key = null;
     }
 
@@ -154,12 +157,13 @@ jsnx.classes.MultiDiGraph.prototype.add_edge_impl = function(u, v, opt_key, opt_
  *
  * @param {jsnx.Node} u
  * @param {jsnx.Node} v
- * @param {(number|string)} opt_key
+ * @param {(number|string)=} opt_key
  *      Used to distinguish multiple edges between a pair of nodes.
  *      If null or undefined remove a single (abritrary) edge between u and v.
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.remove_edge = function(u, v, opt_key) {
     if(!this.has_node(u) ||
@@ -293,11 +297,11 @@ jsnx.classes.MultiDiGraph.prototype.generate_edges_iter = function(opt_nbunch,
  *
  * @see #edges
  *
- * @param {jsnx.NodeContainer} opt_nbunch A container of nodes.
+ * @param {jsnx.NodeContainer=} opt_nbunch A container of nodes.
  *      The container will be iterated through once.
- * @param {boolean} opt_data (default=False)
+ * @param {boolean=} opt_data (default=False)
  *      If True, return edge attribute dict with each edge.
- * @param {boolean} opt_keys (default=False)
+ * @param {boolean=} opt_keys (default=False)
  *      If True, return edge keys with each edge.
  *
  * @return {goog.iter.Iterator}
@@ -305,6 +309,7 @@ jsnx.classes.MultiDiGraph.prototype.generate_edges_iter = function(opt_nbunch,
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.edges_iter = function(opt_nbunch, opt_data,
         opt_keys) {
@@ -366,6 +371,7 @@ jsnx.classes.MultiDiGraph.prototype.out_edges = function(opt_nbunch, opt_data, o
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.in_edges_iter = function(opt_nbunch, 
         opt_data, opt_keys) {
@@ -408,11 +414,12 @@ jsnx.classes.MultiDiGraph.prototype.out_edges_iter = function(opt_nbunch,
  * @param {boolean} opt_keys (default=False)
  *      If True, return edge keys with each edge.
  *
- * @return {Array}
+ * @return {!Array}
  *      A list  of (u,v), (u,v,d) or (u,v,key,d) tuples of edges.
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.in_edges = function(opt_nbunch, opt_data, opt_keys) {
     return goog.iter.toArray(this.in_edges_iter(opt_nbunch, opt_data, opt_keys));
@@ -458,10 +465,10 @@ jsnx.classes.MultiDiGraph.prototype.generate_degree_iter = function(opt_nbunch,
  * @see #degree
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {(jsnx.Node|jsnx.NodeContainer)=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -471,10 +478,11 @@ jsnx.classes.MultiDiGraph.prototype.generate_degree_iter = function(opt_nbunch,
  * name could be equal to a node name, nbunch as to be set to null explicitly
  * to use the second argument as weight attribute name.
  *
- * @return {goog.iter.Iterator}  The iterator returns two-tuples of (node, degree).
+ * @return {!goog.iter.Iterator}  The iterator returns two-tuples of (node, degree).
  *
  * @override
  * @export
+ * @suppress {checkTypes}
  */
 jsnx.classes.MultiDiGraph.prototype.degree_iter = jsnx.classes.DiGraph.prototype.degree_iter;
 
@@ -489,10 +497,10 @@ jsnx.classes.MultiDiGraph.prototype.degree_iter = jsnx.classes.DiGraph.prototype
  * @see #out_degree_iter
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {(jsnx.Node|jsnx.NodeContainer)=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -521,10 +529,10 @@ jsnx.classes.MultiDiGraph.prototype.in_degree_iter = jsnx.classes.DiGraph.protot
  * @see #in_degree_iter
  *
  *
- * @param {jsnx.NodeContainer} opt_nbunch  A container of nodes.
+ * @param {jsnx.NodeContainer=} opt_nbunch  A container of nodes.
  *       The container will be iterated through once.
  *
- * @param {string} opt_weight 
+ * @param {string=} opt_weight 
  *       The edge attribute that holds the numerical value used 
  *       as a weight.  If None, then each edge has weight 1.
  *       The degree is the sum of the edge weights adjacent to the node.
@@ -585,13 +593,13 @@ jsnx.classes.MultiDiGraph.prototype.is_directed = function() {
  *      This is in contrast to the similar G=DiGraph(D) which returns a
  *      shallow copy of the data.
  *
- * @return {jsnx.DiGraph} A deepcopy of the graph
+ * @return {!jsnx.classes.MultiDiGraph} A deepcopy of the graph
  *
  * @override
  * @export
  */
 jsnx.classes.MultiDiGraph.prototype.to_directed = function() {
-    return jsnx.helper.deepcopy_instance(this);    
+    return jsnx.helper.deepcopy_instance(this);
 };
 
 
@@ -617,7 +625,7 @@ jsnx.classes.MultiDiGraph.prototype.to_directed = function() {
  *      If True only keep edges that appear in both directions 
  *      in the original digraph. 
  *
- * @return {jsnx.MultiGraph} 
+ * @return {!jsnx.classes.MultiGraph} 
  *      An undirected graph with the same name and nodes and
  *      with edge (u,v,data) if either (u,v,data) or (v,u,data)
  *      is in the digraph.  If both edges exist in digraph and
@@ -634,8 +642,7 @@ jsnx.classes.MultiDiGraph.prototype.to_undirected = function(opt_reciprocal) {
     // H.name(this.name()); // this is redundant
     H.add_nodes_from(this.nodes_iter(true));
 
-    var self = this,
-        u, v;
+    var u, v;
 
     if(opt_reciprocal) {
         goog.iter.forEach(this.edges_iter(null, true, true), 
@@ -681,7 +688,7 @@ jsnx.classes.MultiDiGraph.prototype.to_undirected = function(opt_reciprocal) {
  * @param {jsnx.NodeContainer} nbunch  
  *      A container of nodes which will be iterated through once.
  *
- * @return {jsnx.MultiDiGraph} A subgraph of the graph with the same edge attributes.
+ * @return {jsnx.classes.MultiDiGraph} A subgraph of the graph with the same edge attributes.
  *
  *
  * @override
@@ -733,7 +740,7 @@ jsnx.classes.MultiDiGraph.prototype.subgraph = function(nbunch) {
  *      If False, reverse the reverse graph is created using
  *      the original graph (this changes the original graph).
  *
- * @return {!jsnx.MultiDiGraph} A copy of the graph or the graph itself
+ * @return {!jsnx.classes.MultiDiGraph} A copy of the graph or the graph itself
  *
  * @export
  */

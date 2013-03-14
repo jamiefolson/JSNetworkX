@@ -3,6 +3,8 @@ goog.provide('jsnx.generators.classic');
 
 goog.require('jsnx.classes.Graph');
 goog.require('jsnx.helper');
+goog.require('goog.array');
+goog.require('goog.iter');
 
 
 /**
@@ -14,10 +16,21 @@ goog.require('jsnx.helper');
 jsnx.generators.classic.tree_edges_ = function(n, r) {
     // helper function for trees
     // yields edges in rooted tree at 0 with n nodes and branching ratio r
-    var nodes = jsnx.helper.range(n),
-        parents = [nodes.next()],
-        iterator = new goog.iter.Iterator(),
-        source;
+    var nodes = jsnx.helper.range(n);
+    var source;
+    var parents;
+    var iterator = new goog.iter.Iterator();
+    try {
+        parents = [nodes.next()];
+    }
+    catch(ex) {
+      if (ex !== goog.iter.StopIteration) {
+        throw ex;
+      }
+      else {
+        return iterator;
+      }
+    }
 
     iterator.next = function() {
         if(parents.length === 0) {
@@ -32,19 +45,75 @@ jsnx.generators.classic.tree_edges_ = function(n, r) {
     }, function(i) {
         try {
             var target = nodes.next();
-            parents.append(target);
+            parents.push(target);
             return [source, target];
         }
         catch(e) {
-            if(e !== jsnx.iter.StopIteration) {
+            if(e !== goog.iter.StopIteration) {
                 throw e;
             }
         }
     });
 };
 
-//TODO: full_rary_tree
-//TODO: balanced_tree
+
+/**
+ * Creates a full r-ary tree of n vertices.
+ * Sometimes called a k-ary, n-ary, or m-ary tree.  "... all non-leaf
+ * vertices have exactly r children and all levels are full except
+ * for some rightmost position of the bottom level (if a leaf at the
+ * bottom level is missing, then so are all of the leaves to its
+ * right."
+ *
+ * @param {number} r branching factor of the tree
+ * @param {number} n number of nodes in the tree
+ * @param {jsnx.classes.Graph=} opt_create_using
+ *   Use specified type to construct graph
+ *
+ * @return {jsnx.classes.Graph} An r-ary tree with n nodes.
+ * @export
+ */
+jsnx.generators.classic.full_rary_tree = function(r, n, opt_create_using) {
+  var G = jsnx.generators.classic.empty_graph(n, opt_create_using);
+  G.add_edges_from(jsnx.generators.classic.tree_edges_(n,r));
+  return G;
+};
+goog.exportSymbol('jsnx.full_rary_tree', jsnx.generators.classic.full_rary_tree);
+
+
+/**
+ * Return the perfectly balanced r-tree of height h.
+ *
+ * This is the rooted tree where all leaves are at distance h from
+ * the root. The root has degree r and all other internal nodes have
+ * degree r+1.
+ *
+ * Node labels are the integers 0 (the root) up to  number_of_nodes - 1.
+ *
+ * Also refered to as a complete r-ary tree.
+ *
+ * @param {number} r  Branching factor of the tree 
+ * @param {number} h Height of the tree
+ * @param {jsnx.classes.Graph} opt_create_using 
+ *    Use specified type to construct graph
+ *
+ * @return {jsnx.classes.Graph}
+ * @export
+ */
+jsnx.generators.classic.balanced_tree = function(r, h, opt_create_using) {
+  var n;
+  if (r === 1) {
+    n = 2;
+  }
+  else {
+    n = Math.floor((1 - Math.pow(r, (h+1))) / (1 - r));
+  }
+  var G = jsnx.generators.classic.empty_graph(n, opt_create_using);
+  G.add_edges_from(jsnx.generators.classic.tree_edges_(n,r));
+  return G;
+};
+goog.exportSymbol('jsnx.balanced_tree', jsnx.generators.classic.balanced_tree);
+
 //TODO: barbell_graph
 
 /**
@@ -56,6 +125,7 @@ jsnx.generators.classic.tree_edges_ = function(n, r) {
  *      add nodes to.
  *  
  *  @return {jsnx.classes.Graph}
+ *  @export
  */
 jsnx.generators.classic.complete_graph = function(n, opt_create_using) {
     var G = jsnx.generators.classic.empty_graph(n, opt_create_using);
@@ -86,6 +156,7 @@ goog.exportSymbol('jsnx.complete_graph', jsnx.generators.classic.complete_graph)
  *      add nodes to.
  *  
  * @return {jsnx.classes.Graph}
+ * @export
  */
 jsnx.generators.classic.cycle_graph = function(n, opt_create_using) {
     var G = jsnx.generators.classic.path_graph(n, opt_create_using);
@@ -135,11 +206,13 @@ goog.exportSymbol('jsnx.cycle_graph', jsnx.generators.classic.cycle_graph);
  *
  *  @see create_empty_copy
  *
- *  @param{number=} opt_n The number of nodes to add to the graph
- *  @param{jsnx.classes.Graph=} opt_create_using Graph instance to empty and
+ *  @param{?number=} opt_n The number of nodes to add to the graph
+ *  @param{?jsnx.classes.Graph=} opt_create_using Graph instance to empty and
  *      add nodes to.
  *  
  *  @return {jsnx.classes.Graph}
+ *  @export
+ *  @suppress {checkTypes} 
  */
 jsnx.generators.classic.empty_graph = function(opt_n, opt_create_using) {
     if(opt_n instanceof jsnx.classes.Graph) {
@@ -167,7 +240,80 @@ jsnx.generators.classic.empty_graph = function(opt_n, opt_create_using) {
 };
 goog.exportSymbol('jsnx.empty_graph', jsnx.generators.classic.empty_graph);
 
-//TODO: grid_2d_graph
+/**
+ * Return the 2d grid graph of mxn nodes,
+ * each connected to its nearest neighbors.
+ * Optional argument periodic=True will connect
+ * boundary nodes via periodic boundary conditions. 
+ *
+ * @param {number} m Number of rows
+ * @param {number} n Number of columns
+ * @param {boolean=} opt_periodic
+ * @param {jsnx.classes.Graph=} opt_create_using
+ *
+ * @return {jsnx.classes.Graph}
+ * @export
+ */
+jsnx.generators.classic.grid_2d_graph = function(m, n, opt_periodic, opt_create_using) {
+  var G = jsnx.generators.classic.empty_graph(0, opt_create_using);
+  G.name('grid_2d_graph');
+  var rows = goog.iter.toArray(jsnx.helper.range(m));
+  var columns = goog.iter.toArray(jsnx.helper.range(n));
+  goog.array.forEach(rows, function(i) {
+    goog.array.forEach(columns, function(j) {
+      G.add_node([i,j].toString());
+    });
+  });
+  goog.iter.forEach(jsnx.helper.range(1,m), function(i) {
+    goog.array.forEach(columns, function(j) {
+      G.add_edge([i,j].toString(), [i-1,j].toString());
+    });
+  });
+  goog.array.forEach(rows, function(i) {
+    goog.iter.forEach(jsnx.helper.range(1,n), function(j) {
+      G.add_edge([i,j].toString(), [i,j-1].toString());
+    });
+  });
+  if (G.is_directed()) {
+    goog.iter.forEach(jsnx.helper.range(0, m - 1), function(i) {
+      goog.array.forEach(columns, function(j) {
+        G.add_edge([i,j].toString(), [i+1,j].toString());
+      });
+    });
+    goog.array.forEach(rows, function(i) {
+      goog.iter.forEach(jsnx.helper.range(0, n - 1), function(j) {
+        G.add_edge([i,j].toString(), [i,j+1].toString());
+      });
+    });
+  }
+
+  if (opt_periodic) {
+    if (n > 2) {
+      goog.array.forEach(rows, function(i) {
+        G.add_edge([i,0].toString(), [i,n-1].toString());
+      });
+      if (G.is_directed()) {
+        goog.array.forEach(rows, function(i) {
+          G.add_edge([i,n-1].toString(), [i,0].toString());
+        });
+      }
+    }
+    if (m > 2) {
+      goog.array.forEach(columns, function(j) {
+        G.add_edge([0,j].toString(), [m-1,j].toString());
+      });
+      if (G.is_directed()) {
+        goog.array.forEach(columns, function(j) {
+          G.add_edge([m-1,j].toString(), [0,j].toString());
+        });
+      }
+    }
+    G.name('periodic_grid_2d_graph(' + m + ',' + n + ')');
+  }
+  return G;
+};
+goog.exportSymbol('jsnx.grid_2d_graph', jsnx.generators.classic.grid_2d_graph);
+
 //TODO: grid_graph
 //TODO: hypercube_graph
 //TODO: ladder_graph
@@ -182,6 +328,7 @@ goog.exportSymbol('jsnx.empty_graph', jsnx.generators.classic.empty_graph);
  *      add nodes to.
  *
  * @return {jsnx.classes.Graph}
+ * @export
  */
 jsnx.generators.classic.null_graph = function(opt_create_using) {
     var G = jsnx.generators.classic.empty_graph(0, opt_create_using);
@@ -201,6 +348,7 @@ goog.exportSymbol('jsnx.null_graph', jsnx.generators.classic.null_graph);
  *      add nodes to.
  *
  * @return {jsnx.classes.Graph}
+ * @export
  */
 jsnx.generators.classic.path_graph = function(n, opt_create_using) {
     var G = jsnx.generators.classic.empty_graph(n, opt_create_using);
@@ -221,6 +369,7 @@ goog.exportSymbol('jsnx.path_graph', jsnx.generators.classic.path_graph);
  *      add nodes to.
  *
  * @return {jsnx.classes.Graph}
+ * @export
  */
 jsnx.generators.classic.trivial_graph = function(opt_create_using) {
     var G = jsnx.generators.classic.empty_graph(1, opt_create_using);
