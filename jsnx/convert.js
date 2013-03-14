@@ -73,18 +73,16 @@ jsnx.convert.to_networkx_graph = function(data, create_using, multigraph_input) 
     var result;
 
     // jsnx graph
-    if(data.hasOwnProperty('adj')) {
+    if(data instanceof jsnx.classes.Graph) {//data.hasOwnProperty('adj')) {
        try {
-            result = jsnx.convert.from_dict_of_dicts(data['adj'], create_using, data.is_multigraph());
-            if(goog.object.containsKey(data, 'graph') && goog.typeOf(data['graph']) === 'object') {
-                result['graph'] = goog.object.clone(data['graph']);
-            }
-            if(goog.object.containsKey(data, 'node') && goog.typeOf(data['node']) === 'object') {
-                result['node'] = goog.object.map(data['node'], function(element) {
-                    return goog.object.clone(element);
-                });
-            }
-            return result;
+            var G = jsnx.convert.prep_create_using_(create_using);
+            G.add_nodes_from(data.nodes_iter(true)); 
+            G.add_edges_from(data.edges_iter(undefined,true)); 
+            //result = jsnx.convert.from_dict_of_dicts(data['adj'], create_using, data.is_multigraph());
+            
+            //goog.object.extend(result.graph_,data.graph_);
+            //result.nodes_ = data.nodes_;
+            return G;
        }
        catch(e) {
            throw new Error('Input is not a correct jsnx graph');
@@ -112,7 +110,8 @@ jsnx.convert.to_networkx_graph = function(data, create_using, multigraph_input) 
             return jsnx.convert.from_edgelist(data, create_using);
         }
         catch(e) {
-            throw new Error('Input is not valid edge list');
+            throw e;
+            //throw new Error('Input is not valid edge list');
         }
     }
 };

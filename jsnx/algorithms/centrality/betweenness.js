@@ -1,7 +1,7 @@
 goog.provide('jsnx.algorithms.centrality.betweenness')
 
 goog.require('goog.structs.PriorityQueue');
-goog.require('goog.structs.Map');
+goog.require('jsnx.classes.HashMap');
 goog.require('goog.iter');
 goog.require('goog.math');
 goog.require('goog.json');
@@ -14,8 +14,7 @@ goog.require('jsnx.helper');
  * Betweenness centrality measures.
  * 
  */
-__all__ = [ 'betweenness_centrality', 'edge_betweenness_centrality',
-        'edge_betweenness' ]
+
 
 function sample(arr, size, opts) {
     var replace = opts.replace || false;
@@ -115,7 +114,7 @@ function betweenness_centrality(G, opts) {
 
     var nodes, S, P, sigma;
 
-    var betweenness = new goog.structs.Map();
+    var betweenness = new jsnx.structs.HashMap();
     // b[v]=0 for v in G
     goog.iter.forEach(G.nodes_iter(), function(d) {
         betweenness.set(d, 0.0);
@@ -163,7 +162,7 @@ function default_weight(data) {
  * t)`-paths, and `\sigma(s, t|e)` is the number of those paths passing through
  * edge `e` [2]_.
  * 
- * @param G
+ * @param {jsnx.classes.Graph} G
  *            graph A NetworkX graph
  * 
  * @param opt.normalized
@@ -201,7 +200,7 @@ function edge_betweenness_centrality(G, opts) {
             || default_weight;
 
     var nodes = G.nodes(), S, P, sigma;
-    betweenness = new goog.structs.Map();
+    betweenness = new jsnx.structs.HashMap();
     // b[v]=0 for v in G
     goog.iter.forEach(G.nodes_iter(), function(d) {
         betweenness.set(d, 0.0);
@@ -240,7 +239,7 @@ function edge_betweenness(G, opts) {
 // helpers for betweenness centrality
 
 function _single_source_shortest_path_basic(G, s) {
-    var S = [], P = new goog.structs.Map(), Q = [], D = new goog.structs.Map(), sigma = new goog.structs.Map(), v, Dv;
+    var S = [], P = new jsnx.structs.HashMap(), Q = [], D = new jsnx.structs.HashMap(), sigma = new jsnx.structs.HashMap(), v, Dv;
     // P[v]=[] for v in G
     // sigma[v]=0 for v in G
     goog.iter.forEach(G.nodes_iter(), function(v) {
@@ -277,7 +276,7 @@ function _single_source_shortest_path_basic(G, s) {
 function _single_source_dijkstra_path_basic(G, s, weight) {
     var weight = weight || default_weight;
     // modified from Eppstein
-    var S = [], P = new goog.structs.Map(), D = new goog.structs.Map(), sigma = new goog.structs.Map(), seen = new goog.structs.Map(), v, Dv;
+    var S = [], P = new jsnx.structs.HashMap(), D = new jsnx.structs.HashMap(), sigma = new jsnx.structs.HashMap(), seen = new jsnx.structs.HashMap(), v, Dv;
     // P[v]=[] for v in G
     // sigma[v]=0 for v in G
     goog.iter.forEach(G.nodes_iter(), function(v) {
@@ -335,7 +334,7 @@ function _single_source_dijkstra_path_basic(G, s, weight) {
 }
 
 function _accumulate_basic(betweenness, S, P, sigma, s) {
-    var delta = new goog.structs.Map(), w, coeff;
+    var delta = new jsnx.structs.HashMap(), w, coeff;
     goog.array.forEach(S, function(v) {
         delta.set(v, 0.0);
     })
@@ -354,7 +353,7 @@ function _accumulate_basic(betweenness, S, P, sigma, s) {
 
 function _accumulate_endpoints(betweenness, S, P, sigma, s) {
     betweenness.set(s, betweenness.get(s) + S.length - 1)
-    var delta = new goog.structs.Map(), w, coeff;
+    var delta = new jsnx.structs.HashMap(), w, coeff;
     goog.array.forEach(S, function(v) {
         delta.set(v, 0.0);
     })
@@ -372,7 +371,7 @@ function _accumulate_endpoints(betweenness, S, P, sigma, s) {
 }
 
 function _accumulate_edges(betweenness, S, P, sigma, s) {
-    var delta = new goog.structs.Map(), w, coeff, c;
+    var delta = new jsnx.structs.HashMap(), w, coeff, c;
     goog.array.forEach(S, function(v) {
         delta.set(v, 0.0);
     })

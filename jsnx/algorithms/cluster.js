@@ -64,24 +64,15 @@ jsnx.algorithms.cluster.triangles_and_degree_iter_ = function(G, opt_nodes) {
         );
     }
 
-    var nodes_nbrs;
-
-    if(!goog.isDefAndNotNull(opt_nodes)) {
-        nodes_nbrs = jsnx.helper.iteritems(G['adj']);
-    }
-    else {
-        nodes_nbrs = jsnx.helper.nested_chain(G.nbunch_iter(opt_nodes), function(n) {
-            return [n, G.get_node(n)];
-        });
-    }
+    var nodes_nbrs = G.adjacency_iter(opt_nodes);
 
     return goog.iter.map(nodes_nbrs, function(d) {
-        var vs = new goog.structs.Set(goog.object.getKeys(d[1])),
+        var vs = new goog.structs.Set(d[1].getKeys()),
             ntriangles = 0;
 
         vs.remove(d[0]);
         goog.iter.forEach(vs, function(w) {
-            var ws = new goog.structs.Set(goog.object.getKeys(G.get_node(w)));
+            var ws = new goog.structs.Set(G.get_node(w).getKeys());
             ws.remove(w);
             ntriangles += vs.intersection(ws).getCount();
         });
@@ -125,31 +116,24 @@ jsnx.algorithms.cluster.weighted_triangles_and_degree_iter_ = function(G, opt_no
         });
     }
 
-    if(!goog.isDefAndNotNull(opt_nodes)) {
-        nodes_nbrs = jsnx.helper.iteritems(G['adj']);
-    }
-    else {
-        nodes_nbrs = jsnx.helper.nested_chain(G.nbunch_iter(opt_nodes), function(n) {
-            return [n, G.get_node(n)];
-        });
-    }
+    nodes_nbrs = G.adjacency_iter(opt_nodes);
 
     return goog.iter.map(nodes_nbrs, function(d) {
         var i = d[0],
-            inbrs = new goog.structs.Set(goog.object.getKeys(d[1]));
+            inbrs = new goog.structs.Set(d[1].getKeys());
         inbrs.remove(i);
         var weighted_triangles = 0,
             seen = new goog.structs.Set();
 
         goog.iter.forEach(inbrs, function(j) {
-            var wij = goog.object.get(G.get_node(i)[j], opt_weight, 1) / max_weight;
+            var wij = goog.object.get(G.get_node(i).get(j), opt_weight, 1) / max_weight;
             seen.add(j);
-            var jnbrs = (new goog.structs.Set(goog.object.getKeys(G.get_node(j))))
+            var jnbrs = (new goog.structs.Set(G.get_node(j).getKeys()))
                         .difference(seen); // this keeps from double counting
 
             goog.iter.forEach(inbrs.intersection(jnbrs), function(k) {
-                var wjk= goog.object.get(G.get_node(j)[k], opt_weight, 1) / max_weight,
-                    wki = goog.object.get(G.get_node(i)[k], opt_weight, 1) / max_weight;
+                var wjk= goog.object.get(G.get_node(j).get(k), opt_weight, 1) / max_weight,
+                    wki = goog.object.get(G.get_node(i).get(k), opt_weight, 1) / max_weight;
                 weighted_triangles += Math.pow(wij * wjk * wki, 1/3);
             });
         });
@@ -309,7 +293,7 @@ goog.exportSymbol('jsnx.transitivity', jsnx.algorithms.cluster.transitivity);
  *      A dictionary keyed by node with the square clustering coefficient value.
  */
 jsnx.algorithms.cluster.square_clustering = function(G, opt_nodes) {
-    var nodes_iter = !goog.isDefAndNotNull(opt_nodes) ? G : G.nbunch_iter(opt_nodes),
+    var nodes_iter = !goog.isDefAndNotNull(opt_nodes) ? G.nodes_iter() : G.nbunch_iter(opt_nodes),
         clustering = {};
 
     goog.iter.forEach(nodes_iter, function(v) {
@@ -317,20 +301,20 @@ jsnx.algorithms.cluster.square_clustering = function(G, opt_nodes) {
         var potential = 0;
 
         goog.iter.forEach(
-            jsnx.helper.combinations(goog.object.getKeys(G.get_node(v)), 2), 
+            jsnx.helper.combinations(G.get_node(v).getKeys(), 2), 
             function(d) {
                 var u = d[0], w = d[1];
-                var squares = (new goog.structs.Set(goog.object.getKeys(G.get_node(u)))).intersection(goog.object.getKeys(G.get_node(w)));
+                var squares = (new goog.structs.Set(G.get_node(u).getKeys())).intersection(goog.object.getKeys(G.get_node(w)));
                 squares.remove(v);
                 squares = squares.getCount();
                 
                 clustering[v] += squares;
                 var degm = squares + 1;
-                if(goog.object.containsKey(G.get_node(u), w)) {
+                if(G.get_node(u).containsKey(w)) {
                     degm += 1;
                 }
-                potential += (goog.object.getCount(G.get_node(u)) - degm) *
-                             (goog.object.getCount(G.get_node(w)) - degm) +
+                potential += (G.get_node(u).getCount() - degm) *
+                             (G.get_node(w).getCount() - degm) +
                              squares;
         });
         if(potential > 0) {

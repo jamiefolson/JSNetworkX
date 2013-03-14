@@ -36,7 +36,7 @@ goog.require('goog.iter');
  */
 jsnx.classes.MultiGraph = function(opt_data, opt_attr) {
     // makes it possible to call jsnx.Graph without new
-    if(!(this instanceof jsnx.classes.MultiGraph)) {
+    if (!(this instanceof jsnx.classes.MultiGraph)) {
         return new jsnx.classes.MultiGraph(opt_data, opt_attr);
     }
     goog.base(this, opt_data, opt_attr);
@@ -52,6 +52,9 @@ goog.exportSymbol('jsnx.MultiGraph', jsnx.classes.MultiGraph);
  */
 jsnx.classes.MultiGraph['__name__'] = 'MultiGraph';
 
+jsnx.classes.MultiGraph.prototype.newEdgeMap_ = function() {
+    return new jsnx.classes.HashMap();
+}
 
 /**
  * Add an edge between u and v.
@@ -85,10 +88,12 @@ jsnx.classes.MultiGraph['__name__'] = 'MultiGraph';
  * @override
  * @export
  */
-jsnx.classes.MultiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_dict) {
+jsnx.classes.MultiGraph.prototype.add_edge = function(u, v, opt_key,
+        opt_attr_dict) {
     var datadict, keydict;
 
-    if(goog.isDefAndNotNull(opt_key) && !(goog.isString(opt_key) || goog.isNumber(opt_key))) {
+    if (goog.isDefAndNotNull(opt_key)
+            && !(goog.isString(opt_key) || goog.isNumber(opt_key))) {
         opt_attr_dict = opt_key;
         opt_key = null;
     }
@@ -98,46 +103,44 @@ jsnx.classes.MultiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_di
 
     if (goog.typeOf(opt_attr_dict) !== 'object') {
         throw new jsnx.exception.JSNetworkXError(
-            'The attr_dict argument must be an object.'
-        );
+                'The attr_dict argument must be an object.');
     }
+    this.add_edge_impl(u, v, opt_key, opt_attr_dict);
+}
+jsnx.classes.MultiGraph.prototype.add_edge_impl = function(u, v, opt_key,
+        opt_attr_dict) {
 
-    // add nodes
-    if(!goog.object.containsKey(this['adj'], u)) {
-        this['adj'][u] = {};
-        this['node'][u] = {};
-    }
-    if(!goog.object.containsKey(this['adj'], v)) {
-        this['adj'][v] = {};
-        this['node'][v] = {};
-    }
-    if(goog.object.containsKey(this['adj'][u], v)) {
-        keydict = this['adj'][u][v];
-        if(!goog.isDefAndNotNull(opt_key)) {
+    this.add_node(u);
+    this.add_node(v);
+
+    var uadj = this.adj(u), vadj = this.adj(v);
+    if (uadj.containsKey(v)) {
+        keydict = uadj.get(v);
+        if (!goog.isDefAndNotNull(opt_key)) {
             // find a unique integer key
             // other methods might be better here?
-            opt_key = goog.object.getCount(keydict);
-            while(goog.object.containsKey(keydict, opt_key)) {
+            opt_key = keydict.getCount();
+            while (keydict.containsKey(opt_key)) {
                 opt_key += 1;
             }
         }
-        datadict = goog.object.get(keydict, opt_key, {});
+        datadict = keydict.get(opt_key, {});
         goog.object.extend(datadict, opt_attr_dict);
-        keydict[opt_key] = datadict;
-    }
-    else {
+        keydict.set(opt_key, datadict);
+    } else {
         // selfloops work this way without special treatment
-        if(!goog.isDefAndNotNull(opt_key)) {
+        if (!goog.isDefAndNotNull(opt_key)) {
             opt_key = 0;
         }
         datadict = {};
         goog.object.extend(datadict, opt_attr_dict);
-        keydict = goog.object.create(opt_key, datadict);
-        this['adj'][u][v] = keydict;
-        this['adj'][v][u] = keydict;
+        keydict = this.newEdgeMap_();
+        keydict.set(opt_key, datadict);
+        uadj.set(v, keydict);
+        // u-v and v-u edge are same object, so it's updated without retrieving above
+        vadj.set(u, keydict);
     }
 };
-
 
 /**
  * Add all the edges in ebunch.
@@ -165,63 +168,43 @@ jsnx.classes.MultiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_di
  * @override
  * @export
  */
-jsnx.classes.MultiGraph.prototype.add_edges_from = function(ebunch, opt_attr_dict) {
+jsnx.classes.MultiGraph.prototype.add_edges_from = function(ebunch,
+        opt_attr_dict) {
     // set up attribute dict
     opt_attr_dict = opt_attr_dict || {};
 
     if (goog.typeOf(opt_attr_dict) !== 'object') {
         throw new jsnx.exception.JSNetworkXError(
-            'The attr_dict argument must be an object.'
-        );
+                'The attr_dict argument must be an object.');
     }
 
     // process ebunch
     jsnx.helper.forEach(ebunch, function(e) {
-        var ne = jsnx.helper.len(e),
-            u,v,key = null,dd = {}, keydict, datadict;
+        var ne = jsnx.helper.len(e), u, v, key = null, dd = {}, datadict;
 
-        if(ne === 4) {
+        if (ne === 4) {
             u = e[0];
             v = e[1];
             key = e[2];
             dd = e[3];
-        }
-        else if(ne === 3) {
+        } else if (ne === 3) {
             u = e[0];
             v = e[1];
             dd = e[2];
-        }
-        else if(ne === 2) {
+        } else if (ne === 2) {
             u = e[0];
             v = e[1];
-        }
-        else {
-            throw new jsnx.exception.JSNetworkXError(
-                'Edge tuple ' + goog.json.serialize(e) + ' must be a 2-tuple, 3-tuple or 4-tuple.'
-            );
-        }
-
-        if(goog.object.containsKey(this['adj'], u)) {
-            keydict = goog.object.get(this['adj'][u], v, {});
-        }
-        else {
-            keydict = {};
+        } else {
+            throw new jsnx.exception.JSNetworkXError('Edge tuple '
+                    + goog.json.serialize(e)
+                    + ' must be a 2-tuple, 3-tuple or 4-tuple.');
         }
 
-        if(!goog.isDefAndNotNull(key)) {
-            // find a unique integer key
-            // other methods might be better here?
-            key = goog.object.getCount(keydict);
-            while(goog.object.containsKey(keydict, key)) {
-                key += 1;
-            }
-        }
-        datadict = goog.object.get(keydict, key, {});
-        goog.object.extend(datadict, opt_attr_dict, dd);
-        this.add_edge(u, v, key, datadict);
+        datadict = goog.object.clone(opt_attr_dict);
+        goog.object.extend(datadict, dd);
+        this.add_edge_impl(u, v, key, datadict);
     }, this);
 };
-
 
 /**
  * Remove an edge between u and v.
@@ -238,36 +221,44 @@ jsnx.classes.MultiGraph.prototype.add_edges_from = function(ebunch, opt_attr_dic
  * @export
  */
 jsnx.classes.MultiGraph.prototype.remove_edge = function(u, v, opt_key) {
-    if(!goog.object.containsKey(this['adj'], u) ||
-       !goog.object.containsKey(this['adj'][u], v)) {
-        throw new jsnx.exception.JSNetworkXError(
-            'The edge ' + u + '-' + v + ' is not in the graph'
-        );
+    var uadj = this.adj(u);
+    if (!goog.isDef(uadj) || !uadj.containsKey(v)) {
+        throw new jsnx.exception.JSNetworkXError('The edge ' + u + '-' + v
+                + ' is not in the graph to remove');
     }
+    this.remove_edge_impl(u, v, opt_key);
+}
+/**
+ * 
+ * @param u
+ * @param v
+ * @param opt_key
+ * @override
+ */
+jsnx.classes.MultiGraph.prototype.remove_edge_impl = function(u, v, opt_key) {
 
-    var d = this['adj'][u][v];
+    var uadj = this.adj(u), d = uadj.get(v);
 
     // remove the edge with specified data
-    if(!goog.isDefAndNotNull(opt_key)) {
-        goog.object.remove(d, goog.object.getAnyKey(d));
-    }
-    else {
-        if(!goog.object.containsKey(d, opt_key)) {
-            throw new jsnx.exception.JSNetworkXError(
-                'The edge ' + u + '-' + v + ' with key ' + opt_key + ' is not in the graph'
-            );
+    if (!goog.isDefAndNotNull(opt_key)) {
+        //try { // Don't need to do this, we just checked up above
+        d.remove(d.getKeyIterator().next());
+        //} catch(e) {/** no edges found*/}
+    } else {
+        if (!d.containsKey(opt_key)) {
+            throw new jsnx.exception.JSNetworkXError('The edge ' + u + '-' + v
+                    + ' with key ' + opt_key + ' is not in the graph');
         }
-        goog.object.remove(d, opt_key);
+        d.remove(opt_key);
     }
-    if(goog.object.getCount(d) === 0) {
+    if (d.getCount() === 0) {
         // remove the key entries if last edge
-        goog.object.remove(this['adj'][u], v);
-        if( u != v) { // check for selfloop
-            goog.object.remove(this['adj'][v], u);
+        uadj.remove(v);
+        if (u != v) { // check for selfloop
+            this.adj(v).remove(u);
         }
     }
 };
-
 
 /**
  * Remove all edges specified in ebunch.
@@ -291,16 +282,14 @@ jsnx.classes.MultiGraph.prototype.remove_edge = function(u, v, opt_key) {
 jsnx.classes.MultiGraph.prototype.remove_edges_from = function(ebunch) {
     jsnx.helper.forEach(ebunch, function(e) {
         try {
-            this.remove_edge(e[0], e[1], e[2]);
-        }
-        catch(e) {
-            if(!(e instanceof jsnx.exception.JSNetworkXError)) {
+            this.remove_edge_impl(e[0], e[1], e[2]);
+        } catch (e) {
+            if (!(e instanceof jsnx.exception.JSNetworkXError)) {
                 throw e;
             }
         }
     }, this);
 };
-
 
 /**
  * Return True if the graph has an edge between nodes u and v.
@@ -316,17 +305,18 @@ jsnx.classes.MultiGraph.prototype.remove_edges_from = function(ebunch) {
  * @export
  */
 jsnx.classes.MultiGraph.prototype.has_edge = function(u, v, opt_key) {
-    if(!goog.isDefAndNotNull(opt_key)) {
-        return goog.object.containsKey(this['adj'], u) &&
-               goog.object.containsKey(this['adj'][u], v);
-    }
-    else {
-        return goog.object.containsKey(this['adj'], u) &&
-               goog.object.containsKey(this['adj'][u], v) &&
-               goog.object.containsKey(this['adj'][u][v], opt_key);
+    var e = null;
+    if (!goog.isDefAndNotNull(opt_key)) {
+        e = this.adj(u);
+        return goog.isDef(e) && e.containsKey(v);
+    } else {
+        e = this.adj(u);
+        if (goog.isDef(e)) {
+            return e.containsKey(v) && e.get(v).containsKey(opt_key);
+        }
+        return false;
     }
 };
-
 
 /**
  * Return a list of edges.
@@ -354,9 +344,12 @@ jsnx.classes.MultiGraph.prototype.has_edge = function(u, v, opt_key) {
  * @override
  * @export
  */
-jsnx.classes.MultiGraph.prototype.edges = function(opt_nbunch, opt_data, opt_keys) {
+jsnx.classes.MultiGraph.prototype.edges = function(opt_nbunch, opt_data,
+        opt_keys) {
     return goog.iter.toArray(this.edges_iter(opt_nbunch, opt_data, opt_keys));
 };
+
+jsnx.classes.MultiGraph.prototype._iter = 
 
 
 /**
@@ -382,102 +375,56 @@ jsnx.classes.MultiGraph.prototype.edges = function(opt_nbunch, opt_data, opt_key
  *      An iterator of (u,v), (u,v,d) or (u,v,key,d) tuples of edges.
  *
  * @override
- * @export
+ * 
  */
-jsnx.classes.MultiGraph.prototype.edges_iter = function(opt_nbunch, opt_data, opt_keys) {
-    if(goog.isBoolean(opt_nbunch)) {
-        if(goog.isBoolean(opt_data)) {
+jsnx.classes.MultiGraph.prototype.edges_iter = function(opt_nbunch, opt_data,
+        opt_keys) {
+    if (goog.isBoolean(opt_nbunch)) {
+        if (goog.isBoolean(opt_data)) {
             opt_keys = opt_data;
         }
         opt_data = opt_nbunch;
         opt_nbunch = null;
     }
-
-    var seen = {},
-        iterator,
-        nodes_nbrs, n, nbr;
-
-    if (!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nbrs = jsnx.helper.iteritems(this['adj']);
-    }
-    else {
-        nodes_nbrs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['adj'][n]];
-        }, this);
-    }
-
-    if(opt_data) {
-        return jsnx.helper.nested_chain(nodes_nbrs, function(nd) {
-            n = nd[0];
-
-            var iterator = new goog.iter.Iterator(),
-                iterable = jsnx.helper.iteritems(nd[1]);
-
-            iterator.next = function() {
-                try {
-                    return iterable.next();
-                }
-                catch(e) {
-                    if(e === goog.iter.StopIteration) {
-                        seen[n] = 1;
-                    }
-                    throw e;
-                }
+    var visit = function(n, nbr,edata) {
+        return [ n, nbr ];
+    };
+    if (opt_keys) {
+        if (opt_data){
+            visit = function(n, nbr,edata) {
+                return [ n, nbr, edata[0], edata[1] ];
+            };            
+        }else {
+        visit = function(n, nbr,edata) {
+            return [ n, nbr, edata[0] ];
+        };
+        }
+    }else {
+        if (opt_data){
+            visit = function(n, nbr,edata) {
+                return [ n, nbr, edata[1] ];
             };
-
-            return iterator;
-        }, function(nbrd) {
-            nbr = nbrd[0];
-
-            if(!goog.object.containsKey(seen, nbr)) {
-                return jsnx.helper.iteritems(nbrd[1]);
-            }
-        }, function(keydict) {
-            if(opt_keys) {
-                return [n, nbr, keydict[0], keydict[1]];
-            }
-            else {
-               return [n, nbr, keydict[1]];
-            }
-        });
+        }
     }
-    else {
-        return jsnx.helper.nested_chain(nodes_nbrs, function(nd) {
-            n = nd[0];
 
-            var iterator = new goog.iter.Iterator(),
-                iterable = jsnx.helper.iteritems(nd[1]);
+    var superiter = jsnx.classes.Graph.prototype.edges_iter.call(this,
+            opt_nbunch, true);
 
-            iterator.next = function() {
-                try {
-                    return iterable.next();
-                }
-                catch(e) {
-                    if(e === goog.iter.StopIteration) {
-                        seen[n] = 1;
-                    }
-                    throw e;
-                }
-            };
+    var //seen = this.newNodeMap_(), //don't need this since the superiter takes care of it
+                nodes_nbrs, 
+                n = null, 
+                nbr = null;
 
-            return iterator;
-        }, function(nbrd) {
-            nbr = nbrd[0];
 
-            if(!goog.object.containsKey(seen, nbr)) {
-                return jsnx.helper.iteritems(nbrd[1]);
-            }
-        }, function(keydict) {
-            if(opt_keys) {
-                return [n, nbr, keydict[0]];
-            }
-            else {
-               return [n, nbr];
-            }
+    return jsnx.helper.nested_chain(superiter, function(nd) {
+        n = nd[0];
+        nbr = nd[1];
+        return nd[2].getEntryIterator();
+        }, 
+        function(edata) {
+            return visit(n,nbr,edata);
         });
-    }
 };
-
 
 /**
  * Return the attribute dictionary associated with edge (u,v).
@@ -502,25 +449,22 @@ jsnx.classes.MultiGraph.prototype.edges_iter = function(opt_nbunch, opt_data, op
  * @override
  * @export
  */
-jsnx.classes.MultiGraph.prototype.get_edge_data = function(u, v, opt_key, opt_default) {
+jsnx.classes.MultiGraph.prototype.get_edge_data = function(u, v, opt_key,
+        opt_default) {
     if (!goog.isDef(opt_default)) {
         opt_default = null;
     }
 
-    if(goog.object.containsKey(this['adj'], u) && 
-       goog.object.containsKey(this['adj'][u], v)) {
-        if(!goog.isDefAndNotNull(opt_key)) {
-            return this['adj'][u][v];
+    if (this.has_node(u) && this.adj(u).containsKey(v)) {
+        if (!goog.isDefAndNotNull(opt_key)) {
+            return this.adj(u).get(v);
+        } else {
+            return this.adj(u).get(v).get(opt_key, opt_default);
         }
-        else {
-            return goog.object.get(this['adj'][u][v], opt_key, opt_default);
-        }
-    }
-    else {
+    } else {
         return opt_default;
     }
 };
-
 
 /**
  * Return an iterator for (node, degree).
@@ -540,57 +484,27 @@ jsnx.classes.MultiGraph.prototype.get_edge_data = function(u, v, opt_key, opt_de
  * @export
  */
 jsnx.classes.MultiGraph.prototype.degree_iter = function(opt_nbunch, opt_weight) {
-    var iterator, nodes_nbrs;
+    var iterator, nodes_nbrs, gen_accum;
 
-    if(!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nbrs = jsnx.helper.iteritems(this['adj']);
+    nodes_nbrs = this.adjacency_iter(opt_nbunch);
+
+    if (!goog.isDefAndNotNull(opt_weight)) {
+        gen_accum = jsnx.classes.MultiGraph.count_edges;
+    }else {
+        jsnx.classes.MultiGraph.sum_weights;
     }
-    else {
-        nodes_nbrs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['adj'][n]];
-        }, this);
-    }
+        iterator = goog.iter.map(nodes_nbrs,
+                function(nd) {
+                    var n = nd[0], 
+                        accum = gen_accum(n, opt_weight), 
+                        nbrs = nd[1], 
+                        deg = 0;
 
-    if(!goog.isDefAndNotNull(opt_weight)) {
-        iterator = goog.iter.map(nodes_nbrs, function(nd) {
-            var n = nd[0],
-                nbrs = nd[1],
-                deg = 0;
-
-            goog.object.forEach(nbrs, function(data) {
-                deg += goog.object.getCount(data);
-            });
-
-            return [n, deg + (+(goog.object.containsKey(nbrs, n) && 
-                                goog.object.getCount(nbrs[n])))];
-        });
-    }
-    else {
-        // edge weighted graph - degree is sum of nbr edge weights
-        iterator = goog.iter.map(nodes_nbrs, function(nd) {
-            var n = nd[0],
-                nbrs = nd[1],
-                deg = 0;
-
-            goog.object.forEach(nbrs, function(data) {
-                goog.object.forEach(data, function(d) {
-                    deg += goog.object.get(d, opt_weight, 1);
+                    deg = accum(0, nbrs);
+                    return [ n, deg ];
                 });
-            });
-
-            if(goog.object.containsKey(nbrs, n)) {
-                goog.object.forEach(nbrs[n], function(d) {
-                    deg += goog.object.get(d, opt_weight, 1);
-                });
-            }
-
-            return [n, deg];
-        });
-    }
-
     return iterator;
 };
-
 
 /**
  * Return True if graph is a multigraph, False otherwise.
@@ -604,7 +518,6 @@ jsnx.classes.MultiGraph.prototype.is_multigraph = function() {
     return true;
 };
 
-
 /**
  * Return True if graph is directed, False otherwise.
  *
@@ -616,7 +529,6 @@ jsnx.classes.MultiGraph.prototype.is_multigraph = function() {
 jsnx.classes.MultiGraph.prototype.is_directed = function() {
     return false;
 };
-
 
 /**
  * Return a directed representation of the graph.
@@ -639,26 +551,15 @@ jsnx.classes.MultiGraph.prototype.is_directed = function() {
  * @export
  */
 jsnx.classes.MultiGraph.prototype.to_directed = function() {
-    var G = new jsnx.classes.MultiDiGraph();
-    G.add_nodes_from(this);
-    G.add_edges_from((function() {
-        var u,v;
-        return jsnx.helper.nested_chain(this.adjacency_iter(), function(nd) {
-            u = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrd) {
-            v = nbrd[0];
-            return jsnx.helper.iteritems(nbrd[1]);
-        }, function(keydictd) {
-            return [u,v,keydictd[0], jsnx.helper.deepcopy(keydictd[1])];
-        });
-    }.call(this)));
+    var G = new jsnx.classes.MultiDiGraph(null,this.graph_);
+    G.add_nodes_from(this.nodes_iter(true));
+    G.add_edges_from(goog.iter.map(this.edges_iter(null,true, true),
+            function(item) {
+            return [ item[0], item[1], item[2], jsnx.helper.deepcopy(item[3]) ];
+        }));
 
-    G['graph'] = jsnx.helper.deepcopy(this['graph']);
-    G['node'] = jsnx.helper.deepcopy(this['node']);
     return G;
 };
-
 
 /**
  * Return a list of selfloop edges.
@@ -681,50 +582,40 @@ jsnx.classes.MultiGraph.prototype.to_directed = function() {
  */
 jsnx.classes.MultiGraph.prototype.selfloop_edges = function(opt_data, opt_keys) {
     var edges = [];
-    if(opt_data) {
-        if(opt_keys) {
-            goog.object.forEach(this['adj'], function(nbrs, n) {
-                if(goog.object.containsKey(nbrs, n)) {
-                    goog.object.forEach(nbrs[n], function(d, k) {
-                        edges.push([n,n,k,d]);
-                    });
-                }
-            });
+    var visit = function(){};
+    if (opt_data) {
+        if (opt_keys) {
+            visit = function(n, entry){
+                edges.push([n,n,entry[0],entry[1]]);
+            };
+        } else {
+            visit = function(n, entry){
+                edges.push([n,n,entry[1]]);
+            };
         }
-        else {
-            goog.object.forEach(this['adj'], function(nbrs, n) {
-                if(goog.object.containsKey(nbrs, n)) {
-                    goog.object.forEach(nbrs[n], function(d) {
-                        edges.push([n,n,d]);
-                    });
-                }
-            });
-        }
-    }
-    else {
-        if(opt_keys) {
-            goog.object.forEach(this['adj'], function(nbrs, n) {
-                if(goog.object.containsKey(nbrs, n)) {
-                    goog.object.forEach(nbrs[n], function(d, k) {
-                        edges.push([n,n,k]);
-                    });
-                }
-            });
-        }
-        else {
-            goog.object.forEach(this['adj'], function(nbrs, n) {
-                if(goog.object.containsKey(nbrs, n)) {
-                    goog.object.forEach(nbrs[n], function() {
-                        edges.push([n,n]);
-                    });
-                }
-            });
+    } else {
+        if (opt_keys) {
+            visit = function(n, entry){
+                edges.push([n,n,entry[0]]);
+            };
+        } else {
+            visit = function(n, entry){
+                edges.push([n,n]);
+            };
         }
     }
+    goog.iter.forEach(this.adjacency_iter(), function(entry) {
+        var nbrs = entry[1], n = entry[0];
+        if (nbrs.containsKey(n)) {
+            goog.iter.forEach(nbrs.get(n).getEntryIterator(), function(
+                    entry) {
+                visit(n, entry);
+            });
+        }
+    });
 
     return edges;
 };
-
 
 /**
  * Return the number of edges between two nodes.
@@ -744,18 +635,16 @@ jsnx.classes.MultiGraph.prototype.selfloop_edges = function(opt_data, opt_keys) 
  * @export
  */
 jsnx.classes.MultiGraph.prototype.number_of_edges = function(opt_u, opt_v) {
-    if(!goog.isDefAndNotNull(opt_u)) {
+    if (!goog.isDefAndNotNull(opt_u)) {
         return this.size();
     }
 
-    if(goog.object.containsKey(this['adj'], opt_u) &&
-       goog.object.containsKey(this['adj'][opt_u], opt_v)) {
-        return goog.object.getCount(this['adj'][opt_u][opt_v]);
+    if (this.has_node(opt_u) && this.has_edge(opt_u, opt_v)) {
+        return this.adj(opt_u).get(opt_v).getCount();
     }
 
     return 0; //no such edge
 };
-
 
 /**
  * Return the subgraph induced on nodes in nbunch.
@@ -787,32 +676,68 @@ jsnx.classes.MultiGraph.prototype.number_of_edges = function(opt_u, opt_v) {
 jsnx.classes.MultiGraph.prototype.subgraph = function(nbunch) {
     var bunch = this.nbunch_iter(nbunch);
     // create new graph and copy subgraph into it
-    var H = new this.constructor();
+    var H = new this.constructor(null,this.graph_);
     // namespace shortcuts for speed
-    var H_adj = H['adj'],
-        this_adj = this['adj'];
-
+    var H_adj = H.adj_, this_adj = this.adj_, H_nodes = H.nodes_;
+    
     // add nodes and edges (undirected method)
     goog.iter.forEach(bunch, function(n) {
-        var Hnbrs = {};
-        H_adj[n] = Hnbrs;
+        var Hnbrs = this.newNodeMap_();
+        H_adj.set(n, Hnbrs);
 
-        goog.object.forEach(this_adj[n], function(edgedict, nbr) {
-            if(goog.object.containsKey(H_adj, nbr)) {
+        goog.iter.forEach(this_adj.get(n).getEntryIterator(), function(entry) {
+            var edgedict = entry[1], nbr = entry[0];
+            // Check H_adj so you don't add it twice!
+            if (H_adj.containsKey(nbr)) {
                 // add both representations of edge: n-nbr and nbr-n
                 // they share the same edgedict
-                var ed = goog.object.clone(edgedict);
-                Hnbrs[nbr] = ed;
-                H_adj[nbr][n] = ed;
+                var ed = this.newNodeMap_();
+                ed.addAll(goog.iter.map(edgedict.getEntryIterator(), 
+                        function(entry){
+                    return [entry[0], jsnx.helper.deepcopy(entry[1])];
+                }));
+                Hnbrs.set(nbr, ed);
+                H_adj.get(nbr).set(n, ed);
             }
         });
     });
 
-    // copy node and attribute dictionaries
-    goog.object.forEach(this['node'], function(d, n) {
-        H['node'][n] = d;
+ // copy node and attribute dictionaries
+    goog.iter.forEach(H_adj.getKeyIterator(), function(entry) {
+        H_nodes.set(entry[0], entry[1]);
     });
-    H['graph'] = this['graph'];
+    
 
     return H;
+};
+
+jsnx.classes.MultiGraph.count_edges = function(n) {
+    return function(r, nbrs) {
+        var deg = 0;
+        deg = goog.iter.reduce(nbrs.getValueIterator(), function(data) {
+            deg += data.getCount();
+        }, deg);
+        return deg + (+nbrs.containsKey(n) && nbrs.get(n).getCount());
+    };
+};
+
+jsnx.classes.MultiGraph.sum_weights = function(n, opt_weight) {
+    return function(r, nbrs) {
+        var sum = 0;
+        sum = goog.iter.reduce(nbrs.getValueIterator(), function(r, data) {
+            return r
+                    + goog.iter.reduce(data.getValueIterator(),
+                            function(sum, d) {
+                                return sum + goog.object.get(d, opt_weight, 1);
+                            }, 0);
+        }, sum);
+
+        if (nbrs.containsKey(n)) {
+            sum = goog.iter.reduce(nbrs.get(n).getValueIterator(), function(r,
+                    d) {
+                return r + goog.object.get(d, opt_weight, 1);
+            }, sum);
+        }
+        return sum;
+    };
 };

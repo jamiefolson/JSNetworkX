@@ -493,6 +493,9 @@ jsnx.helper.toArray = function(sequence) {
         return goog.iter.toArray(sequence);
     }
     else if(goog.isObject(sequence)) {
+        if(sequence instanceof jsnx.classes.HashMap){
+            return sequence.getEntries();
+        }
         return goog.object.getKeys(sequence);
     }
     else {
@@ -799,3 +802,7 @@ jsnx.helper.deepcopy_instance = function(obj) {
 if(jsnx.TESTING) {
     goog.exportSymbol('jsnx.helper.deepcopy_instance', jsnx.helper.deepcopy_instance);
 }
+
+
+
+

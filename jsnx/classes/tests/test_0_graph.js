@@ -30,14 +30,14 @@ BaseGraphTester.prototype.test_nodes_iter = function() {
     var G = this.K3;
 
     expect(this.sorted(G.nodes_iter())).toEqual(this.k3nodes);
-    expect(this.sorted(G.nodes_iter(true))).toEqual([['0', {}], ['1', {}], ['2',{}]]);
+    expect(this.sorted(G.nodes_iter(true))).toEqual([[0, {}], [1, {}], [2,{}]]);
 };
 
 BaseGraphTester.prototype.test_nodes = function() {
     var G = this.K3;
 
     expect(this.sorted(G.nodes())).toEqual(this.k3nodes);
-    expect(this.sorted(G.nodes(true))).toEqual([['0', {}], ['1', {}], ['2',{}]]);
+    expect(this.sorted(G.nodes(true))).toEqual([[0, {}], [1, {}], [2,{}]]);
 };
 
 BaseGraphTester.prototype.test_has_node = function() {
@@ -57,44 +57,44 @@ BaseGraphTester.prototype.test_has_edge = function() {
 BaseGraphTester.prototype.test_neighbors = function() {
     var G = this.K3;
 
-    expect(this.sorted(G.neighbors(0))).toEqual(['1','2']);
+    expect(this.sorted(G.neighbors(0))).toEqual([1,2]);
     expect(function() { G.neighbors(-1); }).toThrow('JSNetworkXError');
 };
 
 BaseGraphTester.prototype.test_neighbors_iter = function() {
     var G = this.K3;
 
-    expect(this.sorted(G.neighbors_iter(0))).toEqual(['1','2']);
+    expect(this.sorted(G.neighbors_iter(0))).toEqual([1,2]);
     expect(function() { G.neighbors_iter(-1); }).toThrow('JSNetworkXError');
 };
 
 BaseGraphTester.prototype.test_edges = function() {
     var G = this.K3;
 
-    expect(this.sorted(G.edges())).toEqual([['0','1'], ['0','2'], ['1','2']]);
-    expect(this.sorted(G.edges(0))).toEqual([['0','1'], ['0','2']]);
+    expect(this.sorted(G.edges())).toEqual([[0,1], [0,2], [1,2]]);
+    expect(this.sorted(G.edges(0))).toEqual([[0,1], [0,2]]);
     expect(function() { G.edges(-1); }).toThrow('JSNetworkXError');
 };
 
 BaseGraphTester.prototype.test_edges_iter = function() {
     var G = this.K3;
 
-    expect(this.sorted(G.edges_iter())).toEqual([['0','1'], ['0','2'], ['1','2']]);
-    expect(this.sorted(G.edges_iter(0))).toEqual([['0','1'], ['0','2']]);
+    expect(this.sorted(G.edges_iter())).toEqual([[0,1], [0,2], [1,2]]);
+    expect(this.sorted(G.edges_iter(0))).toEqual([[0,1], [0,2]]);
     expect(function() { jsnx.toArray(G.edges(-1)); }).toThrow('JSNetworkXError');
 };
 
 BaseGraphTester.prototype.test_adjacency_list = function() {
     var G = this.K3;
-    expect(G.adjacency_list()).toEqual([['1','2'], ['0','2'], ['0','1']]);
+    expect(G.adjacency_list()).toEqual([[1,2], [0,2], [0,1]]);
 };
 
 BaseGraphTester.prototype.test_degree = function() {
     var G = this.K3;
-    expect(goog.object.getValues(G.degree())).toEqual([2, 2, 2]);
-    expect(G.degree()).toEqual({0:2,1:2,2:2});
+    expect(G.degree().getValues()).toEqual([2, 2, 2]);
+    expect(G.degree().toObject()).toEqual({0:2,1:2,2:2});
     expect(G.degree(0)).toEqual(2);
-    expect(G.degree([0])).toEqual({0:2});
+    expect(G.degree([0]).toObject()).toEqual({0:2});
     expect(function() { G.degree(-1);}).toThrow('JSNetworkXError');
 };
 
@@ -111,9 +111,9 @@ BaseGraphTester.prototype.test_weighted_degree = function() {
 
 BaseGraphTester.prototype.test_degree_iter = function() {
     var G = this.K3;
-    expect(jsnx.toArray(G.degree_iter())).toEqual([['0',2], ['1',2], ['2',2]]);
-    expect(jsnx.helper.objectFromKV(G.degree_iter())).toEqual({0:2, 1:2, 2:2});
-    expect(jsnx.toArray(G.degree_iter(0))).toEqual([['0',2]]);
+    expect(jsnx.toArray(G.degree_iter())).toEqual([[0,2], [1,2], [2,2]]);
+    expect(G.degree().toObject()).toEqual({0:2, 1:2, 2:2});
+    expect(jsnx.toArray(G.degree_iter(0))).toEqual([[0,2]]);
 };
 
 BaseGraphTester.prototype.test_size = function() {
@@ -126,44 +126,48 @@ BaseGraphTester.prototype.test_add_star = function() {
     var G = this.K3.copy(),
     nlist = [12,13,14,15];
     G.add_star(nlist);
-    expect(this.sorted(G.edges(nlist))).toEqual([['12','13'],['12','14'],['12','15']]);
+    expect(this.sorted(G.edges(nlist))).toEqual([[12,13],[12,14],[12,15]]);
 
     G = this.K3.copy();
     G.add_star(nlist, {weight: 2});
-    expect(this.sorted(G.edges(nlist, true))).toEqual([['12','13',{weight: 2}], ['12','14',{weight: 2}], ['12','15',{weight: 2}]]);
+    expect(this.sorted(G.edges(nlist, true))).toEqual([[12,13,{weight: 2}], 
+                                                   [12,14,{weight: 2}], 
+                                                   [12,15,{weight: 2}]]);
 };
 
 BaseGraphTester.prototype.test_add_path = function() {
     var G = this.K3.copy(),
     nlist = [12,13,14,15];
     G.add_path(nlist);
-    expect(this.sorted(G.edges(nlist))).toEqual([['12','13'], ['13','14'], ['14','15']]);
+    expect(this.sorted(G.edges(nlist))).toEqual([[12,13], [13,14], [14,15]]);
 
     G = this.K3.copy();
     G.add_path(nlist, {weight: 2.0});
-    expect(this.sorted( G.edges(nlist, true))).toEqual([['12','13',{weight: 2}], ['13','14',{weight: 2}], ['14','15',{weight: 2}]]);
+    expect(this.sorted( G.edges(nlist, true))).toEqual([[12,13,{weight: 2}], 
+                                                        [13,14,{weight: 2}], 
+                                                        [14,15,{weight: 2}]]);
 };
 
 BaseGraphTester.prototype.test_add_cycle = function() {
     var G = this.K3.copy(),
     nlist = [12,13,14,15],
     oklist = [
-        [['12','13'], ['12','15'], ['13','14'], ['14','15']],
-        [['12','13'], ['13','14'], ['14', '15'], ['15','12']]
+        [[12,13], [12,15], [13,14], [14,15]],
+        [[12,13], [13,14], [14, 15], [15,12]]
     ];
     G.add_cycle(nlist);
     expect(oklist).toContain(this.sorted(G.edges(nlist)));
 
     G = this.K3.copy();
-    oklist = [ [['12','13',{'weight':1}],
-        ['12','15',{'weight':1}],
-        ['13','14',{'weight':1}],
-        ['14','15',{'weight':1}]],
+    oklist = [ [[12,13,{'weight':1}],
+        [12,15,{'weight':1}],
+        [13,14,{'weight':1}],
+        [14,15,{'weight':1}]],
 
-        [['12','13',{'weight':1}],
-            ['13','14',{'weight':1}],
-            ['14','15',{'weight':1}],
-            ['15','12',{'weight':1}]] 
+        [[12,13,{'weight':1}],
+            [13,14,{'weight':1}],
+            [14,15,{'weight':1}],
+            [15,12,{'weight':1}]] 
     ];
     G.add_cycle(nlist, {weight: 1});
     expect(oklist).toContain(this.sorted(G.edges(nlist, true)));
@@ -172,8 +176,8 @@ BaseGraphTester.prototype.test_add_cycle = function() {
 BaseGraphTester.prototype.test_nbunch_iter = function() {
     var G = this.K3;
     expect(jsnx.toArray(G.nbunch_iter())).toEqual(this.k3nodes); // all nodes
-    expect(jsnx.toArray(G.nbunch_iter(0))).toEqual(['0']); // single node
-    expect(jsnx.toArray(G.nbunch_iter([0,1]))).toEqual(['0','1']); // sequence
+    expect(jsnx.toArray(G.nbunch_iter(0))).toEqual([0]); // single node
+    expect(jsnx.toArray(G.nbunch_iter([0,1]))).toEqual([0,1]); // sequence
     // sequence with none in graph
     expect(jsnx.toArray(G.nbunch_iter([-1]))).toEqual([]);
     // string sequence with none in graph
@@ -199,8 +203,8 @@ BaseGraphTester.prototype.test_selfloop_degree = function() {
 BaseGraphTester.prototype.test_selfloops = function() {
     var G = this.K3.copy();
     G.add_edge(0, 0);
-    expect(G.nodes_with_selfloops()).toEqual(['0']);
-    expect(G.selfloop_edges()).toEqual([['0','0']]);
+    expect(G.nodes_with_selfloops()).toEqual([0]);
+    expect(G.selfloop_edges()).toEqual([[0,0]]);
     expect(G.number_of_selfloops()).toEqual(1);
     G.remove_edge(0,0);
     G.add_edge(0, 0);
@@ -225,15 +229,15 @@ BaseAttrGraphTester.prototype.test_weighted_degree = function() {
     G.add_edge(1,2, {weight:2, other:3});
     G.add_edge(2,3, {weight:3, other:4});
 
-    expect(goog.object.getValues(G.degree(null, 'weight'))).toEqual([2,5,3]);
-    expect(G.degree(null, 'weight')).toEqual({1:2,2:5,3:3});
+    expect(G.degree(null, 'weight').getValues()).toEqual([2,5,3]);
+    expect(G.degree(null, 'weight').toObject()).toEqual({1:2,2:5,3:3});
     expect(G.degree(1, 'weight')).toEqual(2);
-    expect(G.degree([1], 'weight')).toEqual({1:2});
+    expect(G.degree([1], 'weight').toObject()).toEqual({1:2});
 };
 
 BaseAttrGraphTester.prototype.add_attributes = function(G) {
-    G.graph['foo'] = [];
-    G.node[0]['foo'] = [];
+    G.graph()['foo'] = [];
+    G.node(0)['foo'] = [];
     G.remove_edge(1,2);
     var ll = [];
     G.add_edge(1,2, {foo: ll});
@@ -283,21 +287,21 @@ BaseAttrGraphTester.prototype.deep_copy_attrdict = function(H, G) {
 };
 
 BaseAttrGraphTester.prototype.deepcopy_graph_attr = function(H, G) {
-    expect(G.graph['foo']).toEqual(H.graph['foo']);
-    G.graph['foo'].push(1);
-    expect(G.graph['foo']).not.toEqual(H.graph['foo']);
+    expect(G.graph()['foo']).toEqual(H.graph()['foo']);
+    G.graph()['foo'].push(1);
+    expect(G.graph()['foo']).not.toEqual(H.graph()['foo']);
 };
 
 BaseAttrGraphTester.prototype.deepcopy_node_attr = function(H, G) {
-    expect(G.node[0]['foo']).toEqual(H.node[0]['foo']);
-    G.node[0]['foo'].push(1);
-    expect(G.node[0]['foo']).not.toEqual(H.node[0]['foo']);
+    expect(G.node(0)['foo']).toEqual(H.node(0)['foo']);
+    G.node(0)['foo'].push(1);
+    expect(G.node(0)['foo']).not.toEqual(H.node(0)['foo']);
 };
 
 BaseAttrGraphTester.prototype.deepcopy_edge_attr = function(H, G) {
-    expect(G.get_node(1)[2]['foo']).toEqual(H.get_node(1)[2]['foo']);
-    G.get_node(1)[2]['foo'].push(1);
-    expect(G.get_node(1)[2]['foo']).not.toEqual(H.get_node(1)[2]['foo']);
+    expect(G.get_node(1).get(2)['foo']).toEqual(H.get_node(1).get(2)['foo']);
+    G.get_node(1).get(2)['foo'].push(1);
+    expect(G.get_node(1).get(2)['foo']).not.toEqual(H.get_node(1).get(2)['foo']);
 };
 
 BaseAttrGraphTester.prototype.is_shallow_copy = function(H, G) {
@@ -307,145 +311,145 @@ BaseAttrGraphTester.prototype.is_shallow_copy = function(H, G) {
 };
 
 BaseAttrGraphTester.prototype.shallow_copy_attrdict = function(H, G) {
-    this.shallow_copy_graph_attr(H,H);
-    this.shallow_copy_node_attr(H,H);
-    this.shallow_copy_edge_attr(H,H);
+    this.shallow_copy_graph_attr(H,G);
+    this.shallow_copy_node_attr(H,G);
+    this.shallow_copy_edge_attr(H,G);
 };
 
 BaseAttrGraphTester.prototype.shallow_copy_graph_attr = function(H, G) {
-    expect(G.graph['foo']).toEqual(H.graph['foo']);
-    G.graph['foo'].push(1);
-    expect(G.graph['foo']).toEqual(H.graph['foo']);
+    expect(G.graph()['foo']).toEqual(H.graph()['foo']);
+    G.graph()['foo'].push(1);
+    expect(G.graph()['foo']).toEqual(H.graph()['foo']);
 };
 
 BaseAttrGraphTester.prototype.shallow_copy_node_attr = function(H, G) {
-    expect(G.node[0]['foo']).toEqual(H.node[0]['foo']);
-    G.node[0]['foo'].push(1);
-    expect(G.node[0]['foo']).toEqual(H.node[0]['foo']);
+    expect(G.node(0)['foo']).toEqual(H.node(0)['foo']);
+    G.node(0)['foo'].push(1);
+    expect(G.node(0)['foo']).toEqual(H.node(0)['foo']);
 };
 
 BaseAttrGraphTester.prototype.shallow_copy_edge_attr = function(H, G) {
-    expect(G.get_node(1)[2]['foo']).toEqual(H.get_node(1)[2]['foo']);
-    G.get_node(1)[2]['foo'].push(1);
-    expect(G.get_node(1)[2]['foo']).toEqual(H.get_node(1)[2]['foo']);
+    expect(G.get_node(1).get(2)['foo']).toEqual(H.get_node(1).get(2)['foo']);
+    G.get_node(1).get(2)['foo'].push(1);
+    expect(G.get_node(1).get(2)['foo']).toEqual(H.get_node(1).get(2)['foo']);
 };
 
 BaseAttrGraphTester.prototype.same_attrdict = function(H, G) {
-    var old_foo = H.get_node(1)[2]['foo'];
+    var old_foo = H.get_node(1).get(2)['foo'];
     H.add_edge(1,2, {foo: 'baz'});
-    expect(G.edge).toEqual(H.edge);
+    expect(G.edges()).toEqual(H.edges());
     H.add_edge(1, 2, {foo: old_foo});
-    expect(G.edge).toEqual(H.edge);
-    old_foo = H.node[0]['foo'];
-    H.node[0]['foo'] = 'baz';
-    expect(G.node).toEqual(H.node);
-    H.node[0]['foo'] = old_foo;
-    expect(G.node).toEqual(H.node);
+    expect(G.edges()).toEqual(H.edges());
+    old_foo = H.node(0)['foo'];
+    H.node(0)['foo'] = 'baz';
+    expect(G.nodes()).toEqual(H.nodes());
+    H.node(0)['foo'] = old_foo;
+    expect(G.nodes()).toEqual(H.nodes());
 };
 
 BaseAttrGraphTester.prototype.different_attrdict = function(H, G) {
-    var old_foo = H.get_node(1)[2]['foo'];
+    var old_foo = H.get_node(1).get(2)['foo'];
     H.add_edge(1,2, {foo: 'baz'});
-    expect(G.edge).not.toEqual(H.edge);
+    expect(G.edges(true)).not.toEqual(H.edges(true));
     H.add_edge(1, 2, {foo: old_foo});
-    expect(G.edge).toEqual(H.edge);
-    old_foo = H.node[0]['foo'];
-    H.node[0]['foo'] = 'baz';
-    expect(G.node).not.toEqual(H.node);
-    H.node[0]['foo'] = old_foo;
-    expect(G.node).toEqual(H.node);
+    expect(G.edges()).toEqual(H.edges());
+    old_foo = H.node(0)['foo'];
+    H.node(0)['foo'] = 'baz';
+    expect(G.nodes(true)).not.toEqual(H.nodes(true));
+    H.node(0)['foo'] = old_foo;
+    expect(G.nodes(true)).toEqual(H.nodes(true));
 };
 
 BaseAttrGraphTester.prototype.graphs_equal = function(H, G) {
-    expect(G.adj).toEqual(H.adj);
-    expect(G.edge).toEqual(H.edge);
-    expect(G.node).toEqual(H.node);
-    expect(G.graph).toEqual(H.graph);
+    expect(G.adj().toObject()).toEqual(H.adj().toObject());
+    expect(G.edges(true)).toEqual(H.edges(true));
+    expect(G.nodes(true)).toEqual(H.nodes(true));
+    expect(G.graph()).toEqual(H.graph());
     expect(G.name()).toEqual(H.name());
 
     if(!G.is_directed() && !H.is_directed()) {
-        expect(H.adj[1][2]).toBe(H.adj[2][1]);
-        expect(G.adj[1][2]).toBe(G.adj[2][1]);
+        expect(H.adj(1).get(2)).toBe(H.adj(2).get(1));
+        expect(G.adj(1).get(2)).toBe(G.adj(2).get(1));
     }
     else { // at least one is directed
         if(!G.is_directed()) {
-            G.pred = G.adj;
-            G.succ = G.adj;
+            G.pred_ = G.adj();
+            G.succ_ = G.adj();
         }
         if(!H.is_directed()) {
-            H.pred = H.adj;
-            H.succ = H.adj;
+            H.pred_ = H.adj();
+            H.succ_ = H.adj();
         }
 
-        expect(G.pred).toEqual(H.pred);
-        expect(G.succ).toEqual(H.succ);
-        expect(H.succ[1][2]).toBe(H.pred[2][1]);
-        expect(G.succ[1][2]).toBe(G.pred[2][1]);
+        expect(G.pred()).toEqual(H.pred());
+        expect(G.succ()).toEqual(H.succ());
+        expect(H.succ(1).get(2)).toBe(H.pred(2).get(1));
+        expect(G.succ(1).get(2)).toBe(G.pred(2).get(1));
     }
 };
 
 BaseAttrGraphTester.prototype.test_graph_attr = function() {
     var G = this.K3;
-    G.graph['foo'] = 'bar';
-    expect(G.graph['foo']).toEqual('bar');
-    delete G.graph['foo'];
-    expect(G.graph).toEqual({});
+    G.graph()['foo'] = 'bar';
+    expect(G.graph()['foo']).toEqual('bar');
+    delete G.graph()['foo'];
+    expect(G.graph()).toEqual({});
     var H = new this.Graph(null, {foo: 'bar'});
-    expect(H.graph['foo']).toEqual('bar');
+    expect(H.graph()['foo']).toEqual('bar');
 };
 
 BaseAttrGraphTester.prototype.test_node_attr = function() {
     var G = this.K3;
     G.add_node(1, {foo: 'bar'});
-    expect(G.nodes()).toEqual(['0', '1', '2']);
-    expect(G.nodes(true)).toEqual([['0',{}],['1',{'foo':'bar'}],['2',{}]]);
-    G.node[1]['foo'] = 'baz';
-    expect(G.nodes(true)).toEqual([['0',{}],['1',{'foo':'baz'}],['2',{}]]);
+    expect(G.nodes()).toEqual([0, 1, 2]);
+    expect(G.nodes(true)).toEqual([[0,{}],[1,{'foo':'bar'}],[2,{}]]);
+    G.node(1)['foo'] = 'baz';
+    expect(G.nodes(true).toObject()).toEqual([[0,{}],[1,{'foo':'baz'}],[2,{}]]);
 };
 
 BaseAttrGraphTester.prototype.test_node_attr2 = function() {
     var G = this.K3,
     a = {foo: 'bar'};
     G.add_node(3, a);
-    expect(G.nodes()).toEqual(['0', '1', '2', '3']);
-    expect(G.nodes(true)).toEqual([['0',{}],['1',{}],['2',{}],['3', {foo: 'bar'}]]);
+    expect(G.nodes()).toEqual([0, 1, 2, 3]);
+    expect(G.nodes(true)).toEqual([[0,{}],[1,{}],[2,{}],[3, {foo: 'bar'}]]);
 };
 
 BaseAttrGraphTester.prototype.test_edge_attr = function() {
     var G = new this.Graph();
     G.add_edge(1,2, {foo: 'bar'});
-    expect(G.edges(true)).toEqual([['1','2', {foo: 'bar'}]]);
+    expect(G.edges(true)).toEqual([[1,2, {foo: 'bar'}]]);
 };
 
 BaseAttrGraphTester.prototype.test_edge_attr2 = function() {
     var G = new this.Graph();
     G.add_edges_from([[1,2],[3,4]],{foo: 'bar'});
-    expect(G.edges(true)).toEqual([['1','2', {foo: 'bar'}],['3','4', {foo: 'bar'}]]);
+    expect(G.edges(true)).toEqual([[1,2, {foo: 'bar'}],[3,4, {foo: 'bar'}]]);
 };
 
 BaseAttrGraphTester.prototype.test_edge_attr3 = function() {
     var G = new this.Graph();
     G.add_edges_from([[1,2, {weight: 32}], [3,4,{weight: 64}]], {foo: 'foo'});
-    expect(G.edges(true)).toEqual([['1','2',{foo: 'foo', weight: 32}],
-                                  ['3','4',{foo: 'foo', weight: 64}]]);
-                                  G.remove_edges_from([[1,2], [3,4]]);
-                                  G.add_edge(1,2,{data: 7, spam: 'bar', bar: 'foo'});
-                                  expect(G.edges(true)).toEqual([['1','2',{data: 7, spam: 'bar', bar: 'foo'}]]);
+    expect(G.edges(true)).toEqual([[1,2,{foo: 'foo', weight: 32}],
+                                  [3,4,{foo: 'foo', weight: 64}]]);
+    G.remove_edges_from([[1,2], [3,4]]);
+    G.add_edge(1,2,{data: 7, spam: 'bar', bar: 'foo'});
+    expect(G.edges(true)).toEqual([[1,2,{data: 7, spam: 'bar', bar: 'foo'}]]);
 };
 
 BaseAttrGraphTester.prototype.test_edge_attr4 = function() {
     var G = new this.Graph();
     G.add_edge(1,2, {data:7, spam: 'bar', bar: 'foo'});
-    expect(G.edges(true)).toEqual([['1','2',{data: 7, spam: 'bar', bar: 'foo'}]]);
+    expect(G.edges(true)).toEqual([[1,2,{data: 7, spam: 'bar', bar: 'foo'}]]);
 
-    G.get_node(1)[2]['data'] = 10; // OK to set data like this
-    expect(G.edges(true)).toEqual([['1','2',{data: 10, spam: 'bar', bar: 'foo'}]]);
+    G.get_node(1).get(2)['data'] = 10; // OK to set data like this
+    expect(G.edges(true)).toEqual([[1,2,{data: 10, spam: 'bar', bar: 'foo'}]]);
 
-    G.edge[1][2]['data'] = 20; // another spelling, 'edge'
-    expect(G.edges(true)).toEqual([['1','2',{data: 20, spam: 'bar', bar: 'foo'}]]);
+    G.adj(1).get(2)['data'] = 20; // another spelling, 'edge'
+    expect(G.edges(true)).toEqual([[1,2,{data: 20, spam: 'bar', bar: 'foo'}]]);
     G.edge[1][2]['listdata'] = [20,200];
     G.edge[1][2]['weight'] = 20;
-    expect(G.edges(true)).toEqual([['1','2',{
+    expect(G.edges(true)).toEqual([[1,2,{
         data: 20, 
         spam: 'bar', 
         bar: 'foo',
@@ -499,7 +503,7 @@ BaseAttrGraphTester.prototype.test_selfloop_attr = function() {
     var G = this.K3.copy();
     G.add_edge(0,0);
     G.add_edge(1,1, {weight: 2});
-    expect(G.selfloop_edges(true)).toEqual([['0','0',{}], ['1','1',{weight:2}]]);
+    expect(G.selfloop_edges(true)).toEqual([[0,0,{}], [1,1,{weight:2}]]);
 };
 
 // ----------------------------------------------------------------------
@@ -521,120 +525,124 @@ TestGraph.prototype.setUp = function() {
             1: { 0: ed1, 2: ed3 },
             2: { 0: ed2, 1: ed3 }
         };
-    this.k3edges = [['0', '1'], ['0', '2'], ['1', '2']];
-    this.k3nodes = ['0', '1', '2'];
+    this.k3edges = [[0, 1], [0, 2], [1, 2]];
+    this.k3nodes = [0,1,2];
     this.K3 = new this.Graph();
-
-    this.K3.adj = this.K3.edge = this.k3adj;
-    this.K3.node = {};
-    this.K3.node[0] = {};
-    this.K3.node[1] = {};
-    this.K3.node[2] = {};
+    this.K3.add_edges_from(this.k3edges);
 };
 
 TestGraph.prototype.test_data_input = function() {
-    var G = new this.Graph({1:[2],2:[1]}, {
+    var G = new this.Graph([[1,2]], {
         name: "test"
     });
 
-    expect(this.sorted(jsnx.helper.items(G.adj))).toEqual([['1', {'2': {}}], ['2', {'1': {}}]]);
+    expect(G.adj(1).getEntries()).toEqual([[2, {}]]);
+    expect(G.adj(2).getEntries()).toEqual([[1, {}]]);
+            
 };
 
 TestGraph.prototype.test_adjacency_iter = function() {
     var G = this.K3;
 
-    expect(jsnx.toArray(G.adjacency_iter())).toEqual([
-            ['0', {1: {}, 2: {}}], 
-            ['1', {0: {}, 2: {}}], 
-            ['2', {0: {}, 1: {}}]]);
+    expect(jsnx.toArray(goog.iter.map(G.adjacency_iter(), 
+            function(entry){
+        return [entry[0],this.sorted(entry[1].getKeys())]
+    },this))).toEqual([
+            [0, [1, 2]], 
+            [1, [0, 2]], 
+            [2, [0, 1]]]);
 };
 
 TestGraph.prototype.test_getitem = function() {
     var G = this.K3;
-    expect(G.get_node(0)).toEqual({1: {}, 2: {}});
+    expect(G.get_node(0).getEntries()).toEqual([[1, {}], [2, {}]]);
+    expect(G.has_node('j')).toBeFalsy();
     expect(function() { G.get_node('j'); }).toThrow('KeyError');
+    expect(function() { G.get_node('1'); }).toThrow('KeyError');
     //  assert_raises((TypeError,networkx.NetworkXError), G.__getitem__, ['A'])
 };
 
 TestGraph.prototype.test_add_node = function() {
     var G = new this.Graph();
     G.add_node(0);
-    expect(G.adj).toEqual({0:{}});
+    expect(G.nodes(true)).toEqual([[0,{}]]);
     // test add attributes
     G.add_node(1, {c: 'red'});
     G.add_node(2, {c: 'blue'});
     expect(function() { G.add_node(4, []); }).toThrow('JSNetworkXError');
     expect(function() { G.add_node(4, 4); }).toThrow('JSNetworkXError');
-    expect(G.node[1]['c']).toEqual('red');
-    expect(G.node[2]['c']).toEqual('blue');
+    expect(G.node(1)['c']).toEqual('red');
+    expect(G.node(2)['c']).toEqual('blue');
     // test upding attributes
     G.add_node(1, {c: 'blue'});
     G.add_node(2, {c: 'red'});
-    expect(G.node[1]['c']).toEqual('blue');
-    expect(G.node[2]['c']).toEqual('red');
+    expect(G.node(1)['c']).toEqual('blue');
+    expect(G.node(2)['c']).toEqual('red');
 };
 
 TestGraph.prototype.test_add_nodes_from = function() {
     var G = new this.Graph();
     G.add_nodes_from([0,1,2]);
-    expect(G.adj).toEqual({0:{},1:{},2:{}});
+    expect(G.nodes(true)).toEqual([[0,{}],[1,{}],[2,{}]]);
     // test add attributes
     G.add_nodes_from([0,1,2], {c: 'red'});
-    expect(G.node[0]['c']).toEqual('red');
-    expect(G.node[2]['c']).toEqual('red');
+    expect(G.node(0)['c']).toEqual('red');
+    expect(G.node(2)['c']).toEqual('red');
     // test that attribute dicts are not the same
-    expect(G.node[0]).not.toBe(G.node[1]);
+    expect(G.node(0)).not.toBe(G.node(1));
     // test updating attributes
     G.add_nodes_from([0,1,2], {c: 'blue'});
-    expect(G.node[0]['c']).toEqual('blue');
-    expect(G.node[2]['c']).toEqual('blue');
-    expect(G.node[0]).not.toBe(G.node[1]);
+    expect(G.node(0)['c']).toEqual('blue');
+    expect(G.node(2)['c']).toEqual('blue');
+    expect(G.node(0)).not.toBe(G.node(1));
 
     // test tuple input
     var H = new this.Graph();
     H.add_nodes_from(G.nodes(true));
-    expect(H.node[0]['c']).toEqual('blue');
-    expect(H.node[2]['c']).toEqual('blue');
-    expect(H.node[0]).not.toBe(H.node[1]);
+    expect(H.node(0)['c']).toEqual('blue');
+    expect(H.node(2)['c']).toEqual('blue');
+    expect(H.node(0)).not.toBe(H.node(1));
     // specific overrides general
     H.add_nodes_from([0, [1, {c: 'green'}], [3, {c: 'cyan'}]], {c: 'red'});
-    expect(H.node[0]['c']).toEqual('red');
-    expect(H.node[1]['c']).toEqual('green');
-    expect(H.node[2]['c']).toEqual('blue');
-    expect(H.node[3]['c']).toEqual('cyan');
+    expect(H.node(0)['c']).toEqual('red');
+    expect(H.node(1)['c']).toEqual('green');
+    expect(H.node(2)['c']).toEqual('blue');
+    expect(H.node(3)['c']).toEqual('cyan');
 };
 
 TestGraph.prototype.test_remove_node = function() {
     var G = this.K3;
     G.remove_node(0);
-    expect(G.adj).toEqual({1:{2:{}},2:{1:{}}});
+    expect(G.adj().toObject()).toEqual({ 1 : {2:{}},2 :{1:{}}});
     expect(function() { G.remove_node(-1);}).toThrow('JSNetworkXError');
 };
 
 TestGraph.prototype.test_remove_nodes_from = function() {
     var G = this.K3;
     G.remove_nodes_from([0,1]);
-    expect(G.adj).toEqual({2:{}});
+    expect(G.adj(2).getEntries()).toEqual([]);
     G.remove_nodes_from([-1]); // silent fail
 };
 
 TestGraph.prototype.test_add_edge = function() {
     var G = new this.Graph();
     G.add_edge(0,1);
-    expect(G.adj, {0: {1: {}}, 1: {0: {}}});
+    expect(G.adj(0).get(1)).toEqual({});
+    expect(G.adj(1).get(0)).toEqual({});
     G = new this.Graph();
     G.add_edge.apply(G, [0,1]); //  G.add_edge(*(0,1))
-    expect(G.adj, {0: {1: {}}, 1: {0: {}}});
+    expect(G.adj(0).get(1)).toEqual({});
+    expect(G.adj(1).get(0)).toEqual({});
 };
 
 TestGraph.prototype.test_add_edges_from = function() {
     var G = new this.Graph();
     G.add_edges_from([[0,1],[0,2,{weight:3}]]);
-    expect(G.adj).toEqual({0: {1:{}, 2:{'weight':3}}, 1: {0:{}}, 
+    expect(G.adj().toObject()).toEqual({0: {1:{}, 2:{'weight':3}}, 1: {0:{}}, 
         2:{0:{'weight':3}}});
     G = new this.Graph();
     G.add_edges_from([[0,1],[0,2,{weight:3}],[1,2,{data:4}]], {data:2});
-    expect(G.adj).toEqual({
+    expect(G.adj().toObject()).toEqual({
         0: {1:{'data':2}, 2:{'weight':3,'data':2}}, 
         1: {0:{'data':2}, 2:{'data':4}}, 
         2: {0:{'weight':3,'data':2}, 1:{'data':4}} 
@@ -649,27 +657,27 @@ TestGraph.prototype.test_add_edges_from = function() {
 TestGraph.prototype.test_remove_edge = function() {
     var G = this.K3;
     G.remove_edge(0,1);
-    expect(G.adj).toEqual({0:{2:{}},1:{2:{}},2:{0:{},1:{}}});
+    expect(G.adj().toObject()).toEqual({0:{2:{}},1:{2:{}},2:{0:{},1:{}}});
     expect(function() { G.remove_edge(-1,0); }).toThrow('JSNetworkXError');
 };
 
 TestGraph.prototype.test_remove_edges_from = function() {
     var G = this.K3;
     G.remove_edges_from([[0,1]]);
-    expect(G.adj).toEqual({0:{2:{}},1:{2:{}},2:{0:{},1:{}}});
+    expect(G.adj().toObject()).toEqual({0:{2:{}},1:{2:{}},2:{0:{},1:{}}});
     G.remove_edges_from([[0,0]]); // silent fail
 };
 
 TestGraph.prototype.test_clear = function() {
     var G = this.K3;
     G.clear();
-    expect(G.adj).toEqual({});
+    expect(G.adj().toObject()).toEqual({});
 };
 
 TestGraph.prototype.test_edges_data = function() {
     var G = this.K3;
-    expect(this.sorted(G.edges(true))).toEqual([['0','1',{}],['0','2',{}],['1','2',{}]]);
-    expect(this.sorted( G.edges(0, true))).toEqual([['0','1',{}],['0','2',{}]]);
+    expect(this.sorted(G.edges(true))).toEqual([[0,1,{}],[0,2,{}],[1,2,{}]]);
+    expect(this.sorted( G.edges(0, true))).toEqual([[0,1,{}],[0,2,{}]]);
     expect(function() { G.edges(-1); }).toThrow('JSNetworkXError');
 };
 

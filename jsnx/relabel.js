@@ -94,10 +94,10 @@ jsnx.relabel.relabel_inplace_ = function(G, mapping) {
         
         if(!G.has_node(old)) {
             throw new jsnx.exception.JSNetworkXError(
-                'Node ' + old + ' is not in the graph.'
+                'Node ' + old + ' is not in the graph to relabel.'
             );
         }
-        G.add_node(new_, G['node'][old]);
+        G.add_node(new_, G.node(old));
         if(multigraph) {
             new_edges = goog.array.map(G.edges(old, true, true), function(d) {
                 return [new_, d[1], d[2], d[3]];
@@ -128,7 +128,7 @@ jsnx.relabel.relabel_inplace_ = function(G, mapping) {
 
 
 jsnx.relabel.relabel_copy_ = function(G, mapping) {
-    var H = new G.constructor();
+    var H = new G.constructor(null,G.graph());
     H.name('(' + G.name() + ')');
     if(G.is_multigraph()) {
         H.add_edges_from(goog.iter.map(G.edges_iter(true, true), function(d) {
@@ -149,12 +149,10 @@ jsnx.relabel.relabel_copy_ = function(G, mapping) {
     H.add_nodes_from(goog.iter.map(G, function(n) {
         return goog.object.get(mapping, n, n);
     }));
-    var ndata = {};
-    for(var n in G['node']) {
-        ndata[goog.object.get(mapping, n, n)] = goog.object.clone(G['node'][n]);
-    }
-    goog.object.extend(H['node'], ndata);
-    goog.object.extend(H['graph'], goog.object.clone(G['graph']));
+    H.add_nodes_from(goog.iter.map(G.nodes_iter(true),
+            function(entry){
+        return [goog.object.get(mapping, entry[0], entry[0]), entry[1]];
+    }));
 
     return H;
 };

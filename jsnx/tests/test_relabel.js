@@ -24,22 +24,30 @@ TestRelabel.prototype.test_convert_node_labels_to_integers = function() {
     });
 
     G = jsnx.empty_graph();
+    G.add_nodes_from(['A','B','C','D']);
+    expect(G.has_edge('A','B')).toEqual(false);
     G.add_edges_from([['A','B'],['A','C'],['B','C'],['C','D']]);
     G.name('paw');
     H = jsnx.convert_node_labels_to_integers(G);
-    var degH = goog.object.getValues(H.degree());
-    var degG = goog.object.getValues(G.degree());
+    var degH = H.degree().getValues();
+    var degG = G.degree().getValues();
     expect(this.sorted(degH)).toEqual(this.sorted(degG));
+    expect(G.has_node('A')).toEqual(true);
+    expect(G.has_edge('A','B')).toEqual(true);
+    expect(G.has_edge('A','D')).toEqual(false);
+    expect(G.adj('A').getKeys().length).toEqual(2);
+    expect(G.degree('A')).toEqual(2);
+
 
     H = jsnx.convert_node_labels_to_integers(G, 1000);
-    degH = goog.object.getValues(H.degree());
-    degG = goog.object.getValues(G.degree());
+    degH = H.degree().getValues();
+    degG = G.degree().getValues();
     expect(this.sorted(degH)).toEqual(this.sorted(degG));
-    expect(H.nodes()).toEqual(['1000', '1001', '1002', '1003']);
+    expect(H.nodes()).toEqual([1000, 1001, 1002, 1003]);
 
     H = jsnx.convert_node_labels_to_integers(G, 'increasing degree');
-    degH = goog.object.getValues(H.degree());
-    degG = goog.object.getValues(G.degree());
+    degH = H.degree().getValues();
+    degG = G.degree().getValues();
     expect(this.sorted(degH)).toEqual(this.sorted(degG));
     expect(jsnx.degree(H, 0)).toEqual(1);
     expect(jsnx.degree(H, 1)).toEqual(2);
@@ -47,8 +55,8 @@ TestRelabel.prototype.test_convert_node_labels_to_integers = function() {
     expect(jsnx.degree(H, 3)).toEqual(3);
 
     H = jsnx.convert_node_labels_to_integers(G, 'decreasing degree');
-    degH = goog.object.getValues(H.degree());
-    degG = goog.object.getValues(G.degree());
+    degH = H.degree().getValues();
+    degG = G.degree().getValues();
     expect(this.sorted(degH)).toEqual(this.sorted(degG));
     expect(jsnx.degree(H, 0)).toEqual(3);
     expect(jsnx.degree(H, 1)).toEqual(2);
@@ -70,7 +78,7 @@ TestRelabel.prototype.test_relabel_nodes_function = function() {
     var H = jsnx.relabel_nodes(G, function(n) {
         return n.charCodeAt(0);                         
     });
-    expect(this.sorted(H.nodes())).toEqual(['65', '66', '67', '68']);
+    expect(this.sorted(H.nodes())).toEqual([65, 66, 67, 68]);
 };
 
 TestRelabel.prototype.test_relabel_nodes_graph = function() {

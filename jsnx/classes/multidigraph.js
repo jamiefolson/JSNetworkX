@@ -57,6 +57,14 @@ goog.exportSymbol('jsnx.MultiDiGraph', jsnx.classes.MultiDiGraph);
 jsnx.classes.MultiDiGraph['__name__'] = 'MultiDiGraph';
 
 
+jsnx.classes.MultiDiGraph.prototype.add_node_impl= function(n, opt_attr_dict){
+    if(!this.has_node(n)) {
+        this.succ_.set(n, this.newNodeMap_());
+        this.pred_.set(n, this.newNodeMap_());
+        this.nodes_.set(n, opt_attr_dict);
+    }
+};
+
 /**
  * Add an edge between u and v.
  *
@@ -104,31 +112,26 @@ jsnx.classes.MultiDiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_
             'The attr_dict argument must be an object.'
         );
     }
+    this.add_edge_impl(u,v,opt_key,opt_attr_dict);
+};
 
+jsnx.classes.MultiDiGraph.prototype.add_edge_impl = function(u, v, opt_key, opt_attr_dict) {
     // add nodes
-    if(!goog.object.containsKey(this['succ'], u)) {
-        this['succ'][u] = {};
-        this['pred'][u] = {};
-        this['node'][u] = {};
-    }
-    if(!goog.object.containsKey(this['succ'], v)) {
-        this['succ'][v] = {};
-        this['pred'][v] = {};
-        this['node'][v] = {};
-    }
-    if(goog.object.containsKey(this['succ'][u], v)) {
-        keydict = this['adj'][u][v];
+    this.add_node(u);
+    this.add_node(v);
+    if(this.has_edge(u, v)) {
+        keydict = this.adj(u).get(v);
         if(!goog.isDefAndNotNull(opt_key)) {
             // find a unique integer key
             // other methods might be better here?
-            opt_key = goog.object.getCount(keydict);
-            while(goog.object.containsKey(keydict, opt_key)) {
+            opt_key = keydict.getCount();
+            while(keydict.containsKey(opt_key)) {
                 opt_key += 1;
             }
         }
-        datadict = goog.object.get(keydict, opt_key, {});
+        datadict = keydict.get(opt_key, {});
         goog.object.extend(datadict, opt_attr_dict);
-        keydict[opt_key] = datadict;
+        keydict.set(opt_key, datadict);
     }
     else {
         // selfloops work this way without special treatment
@@ -137,12 +140,12 @@ jsnx.classes.MultiDiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_
         }
         datadict = {};
         goog.object.extend(datadict, opt_attr_dict);
-        keydict = goog.object.create(opt_key, datadict);
-        this['succ'][u][v] = keydict;
-        this['pred'][v][u] = keydict;
+        keydict = this.newEdgeMap_();
+        keydict.set(opt_key, datadict);
+        this.succ(u).set(v, keydict);
+        this.pred(v).set(u, keydict);
     }
 };
-
 
 /**
  * Remove an edge between u and v.
@@ -159,33 +162,124 @@ jsnx.classes.MultiDiGraph.prototype.add_edge = function(u, v, opt_key, opt_attr_
  * @export
  */
 jsnx.classes.MultiDiGraph.prototype.remove_edge = function(u, v, opt_key) {
-    if(!goog.object.containsKey(this['adj'], u) ||
-       !goog.object.containsKey(this['adj'][u], v)) {
+    if(!this.has_node(u) ||
+       !this.has_edge(u, v)) {
         throw new jsnx.exception.JSNetworkXError(
-            'The edge ' + u + '-' + v + ' is not in the graph'
+            'The edge ' + u + '-' + v + ' is not in the graph to remove'
         );
     }
+    this.remove_edge_impl(u,v,opt_key);
+};
 
-    var d = this['adj'][u][v];
+jsnx.classes.MultiDiGraph.prototype.remove_edge_impl = function(u, v, opt_key) {
+    var d = this.succ(u).get(v);
 
     // remove the edge with specified data
     if(!goog.isDefAndNotNull(opt_key)) {
-        goog.object.remove(d, goog.object.getAnyKey(d));
+        d.remove(d.getKeyIterator().next());
     }
     else {
-        if(!goog.object.containsKey(d, opt_key)) {
+        if(!d.containsKey(opt_key)) {
             throw new jsnx.exception.JSNetworkXError(
-                'The edge ' + u + '-' + v + ' with key ' + opt_key + ' is not in the graph'
+                'The edge ' + u + '-' + v + ' with key ' + opt_key + ' is not in the graph to remove'
             );
         }
-        goog.object.remove(d, opt_key);
+        d.remove(opt_key);
     }
-    if(goog.object.getCount(d) === 0) {
+    if(d.getCount() === 0) {
         // remove the key entries if last edge
-        goog.object.remove(this['succ'][u], v);
-        goog.object.remove(this['pred'][v], u);
+        this.succ(u).remove(v);
+        this.pred(v).remove(u);
     }
 };
+
+
+/**
+ * 
+ * @override
+ * @protected
+ */
+jsnx.classes.MultiDiGraph.prototype.generate_edges_iter = function(opt_nbunch, 
+        opt_data, opt_keys, opt_pred, opt_succ) {
+    // handle calls with opt_data being the only argument
+    if (goog.isBoolean(opt_nbunch)) {
+        opt_data = opt_nbunch;
+        opt_nbunch = null;
+    }
+    var include_pred = false, include_succ = true;
+    if (goog.isDefAndNotNull(opt_pred)) {
+        include_pred = opt_pred;
+    } 
+    if (goog.isDefAndNotNull(opt_succ)){
+        include_succ = opt_succ;
+    }
+    
+    if (include_pred && include_succ){
+        throw new Error("Why are you iterating over both directions?");
+    }
+    
+    var visit;
+    if (opt_data) {
+        if (opt_keys) {
+            if (include_succ) {
+                visit = function(n, nbr, edge) {
+                    return [ n, nbr, edge[0], edge[1] ];
+                };
+            } else {
+                visit = function(n, nbr, edge) {
+                    return [ nbr, n, edge[0], edge[1] ];
+                };
+            }
+        } else {
+            if (include_succ) {
+                visit = function(n, nbr, edge) {
+                    return [ n, nbr, edge[1] ];
+                };
+            } else {
+                visit = function(n, nbr, edge) {
+                    return [ nbr, n, edge[1] ];
+                };
+            }
+        }
+    } else {
+        if (opt_keys) {
+            if (include_succ) {
+                visit = function(n, nbr, edge) {
+                    return [ n, nbr, edge[0] ];
+                };
+            } else {
+                visit = function(n, nbr, edge) {
+                    return [ nbr, n, edge[0] ];
+                };
+            }
+        } else {
+            if (include_succ) {
+                visit = function(n, nbr, edge) {
+                    return [ n, nbr ];
+                };
+            } else {
+                visit = function(n, nbr, edge) {
+                    return [ nbr, n];
+                };
+            }
+        }
+    }
+    
+    var n = null, nbr = null;
+
+    var nodes_nrbs = this.adjacency_iter(opt_nbunch, include_pred,include_succ);
+    
+        return jsnx.helper.nested_chain(nodes_nrbs, function(nd) {
+            n = nd[0];
+            return nd[1].getEntryIterator();
+        }, function(nbrd) {
+            nbr = nbrd[0];
+            return nbrd[1].getEntryIterator();
+        }, function(edgedata){
+            return visit(n,nbr,edgedata);
+        });
+};
+
 
 /**
  * Return an iterator over edges.
@@ -194,7 +288,6 @@ jsnx.classes.MultiDiGraph.prototype.remove_edge = function(u, v, opt_key) {
  * in the order (node, neighbor, key, data).
  *
  * Notes:
- *
  *       Nodes in nbunch that are not in the graph will be (quietly) ignored.
  *       For directed graphs edges() is the same as out_edges().
  *
@@ -213,58 +306,9 @@ jsnx.classes.MultiDiGraph.prototype.remove_edge = function(u, v, opt_key) {
  * @override
  * @export
  */
-jsnx.classes.MultiDiGraph.prototype.edges_iter = function(opt_nbunch, opt_data, opt_keys) {
-    if(goog.isBoolean(opt_nbunch)) {
-        if(goog.isBoolean(opt_data)) {
-            opt_keys = opt_data;
-        }
-        opt_data = opt_nbunch;
-        opt_nbunch = null;
-    }
-
-    var nodes_nrbs, n, nbr;
-
-    if(!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nrbs = jsnx.helper.items(this['adj']);
-    }
-    else {
-        nodes_nrbs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['adj'][n]];
-        }, this);
-    }
-
-    if(opt_data) {
-        return jsnx.helper.nested_chain(nodes_nrbs, function(nd) {
-            n = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrsd) {
-            nbr = nbrsd[0];
-            return jsnx.helper.iteritems(nbrsd[1]);
-        }, function(keydictd) {
-            if(opt_keys) {
-                return [n, nbr, keydictd[0], keydictd[1]];
-            }
-            else {
-                return [n, nbr, keydictd[1]];
-            }
-        });
-    }
-    else {
-        return jsnx.helper.nested_chain(nodes_nrbs, function(nd) {
-            n = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrsd) {
-            nbr = nbrsd[0];
-            return jsnx.helper.iteritems(nbrsd[1]);
-        }, function(keydictd) {
-            if(opt_keys) {
-                return [n, nbr, keydictd[0]];
-            }
-            else {
-                return [n, nbr];
-            }
-        });
-    }
+jsnx.classes.MultiDiGraph.prototype.edges_iter = function(opt_nbunch, opt_data,
+        opt_keys) {
+    return this.generate_edges_iter(opt_nbunch, opt_data, opt_keys, false, true);
 };
 
 
@@ -323,58 +367,34 @@ jsnx.classes.MultiDiGraph.prototype.out_edges = function(opt_nbunch, opt_data, o
  * @override
  * @export
  */
-jsnx.classes.MultiDiGraph.prototype.in_edges_iter = function(opt_nbunch, opt_data, opt_keys) {
-     // handle calls with opt_data being the only argument
-    if (goog.isBoolean(opt_nbunch)) {
-        opt_data = opt_nbunch;
-        opt_nbunch = null;
-    }
-
-    var nodes_nrbs, n, nbr;
-
-    if(!goog.isDefAndNotNull) {
-        nodes_nrbs = jsnx.helper.items(this['pred']);
-    }
-    else {
-        nodes_nrbs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['pred'][n]];
-        }, this);
-    }
-
-    if(opt_data) {
-        return jsnx.helper.nested_chain(nodes_nrbs, function(nd) {
-            n = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrsd) {
-            nbr = nbrsd[0];
-            return jsnx.helper.iteritems(nbrsd[1]);
-        }, function(keydictd) {
-            if(opt_keys) {
-                return [nbr, n, keydictd[0], keydictd[1]];
-            }
-            else {
-                return [nbr, n, keydictd[1]];
-            }
-        });
-    }
-    else {
-        return jsnx.helper.nested_chain(nodes_nrbs, function(nd) {
-            n = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrsd) {
-            nbr = nbrsd[0];
-            return jsnx.helper.iteritems(nbrsd[1]);
-        }, function(keydictd) {
-            if(opt_keys) {
-                return [nbr, n, keydictd[0]];
-            }
-            else {
-                return [nbr, n];
-            }
-        });
-    }
+jsnx.classes.MultiDiGraph.prototype.in_edges_iter = function(opt_nbunch, 
+        opt_data, opt_keys) {
+    return this.generate_edges_iter(opt_nbunch,opt_data,opt_keys,true,false);
 };
 
+
+/**
+ * Return an iterator over the outgoing edges.
+ *
+ * @see #edges_iter
+ *
+ * @param {jsnx.NodeContainer} opt_nbunch A container of nodes.
+ *      The container will be iterated through once.
+ * @param {boolean} opt_data (default=False)
+ *      If True, return edge attribute dict with each edge.
+ * @param {boolean} opt_keys (default=False)
+ *      If True, return edge keys with each edge.
+ *
+ * @return {goog.iter.Iterator}
+ *      An iterator of (u,v), (u,v,d) or (u,v,key,d) tuples of edges.
+ *
+ * @override
+ * @export
+ */
+jsnx.classes.MultiDiGraph.prototype.out_edges_iter = function(opt_nbunch, 
+        opt_data, opt_keys) {
+    return this.generate_edges_iter(opt_nbunch,opt_data,opt_keys,false,true);
+};
 
 /**
  * Return a list of the incoming edges.
@@ -398,6 +418,37 @@ jsnx.classes.MultiDiGraph.prototype.in_edges = function(opt_nbunch, opt_data, op
     return goog.iter.toArray(this.in_edges_iter(opt_nbunch, opt_data, opt_keys));
 };
 
+
+jsnx.classes.MultiDiGraph.prototype.generate_degree_iter = function(opt_nbunch, 
+        opt_weight, opt_pred, opt_succ) {
+    var nodes_nbrs = null;
+    var include_pred = false, include_succ = true;
+    if (goog.isDefAndNotNull(opt_pred)) {
+        include_pred = opt_pred;
+    } 
+    if (goog.isDefAndNotNull(opt_succ)){
+        include_succ = opt_succ;
+    }
+    
+    node_nbrs = this.adjacency_iter(opt_nbunch, include_pred, include_succ);
+    
+    var gen_accum = jsnx.classes.MultiGraph.count_edges;
+    if(opt_weight) {
+        gen_accum = jsnx.classes.MultiGraph.sum_weights;
+    }
+    return goog.iter.map(nodes_nbrs, function(nd) {
+            var sum = 0, n;
+            var accum = gen_accum(nd[0], opt_weight);
+            if (include_pred && include_succ){ // edge data is an array of tuples
+                n = nd[0][0];
+                sum = accum(0, nd[0][1]) + accum(0, nd[1][1]);
+            }else {
+                n = nd[0]
+                sum = accum(sum,nd[1]);
+            }
+            return [n, sum];
+        });
+};
 
 /**
  * Return an iterator for (node, degree).
@@ -425,62 +476,7 @@ jsnx.classes.MultiDiGraph.prototype.in_edges = function(opt_nbunch, opt_data, op
  * @override
  * @export
  */
-jsnx.classes.MultiDiGraph.prototype.degree_iter = function(opt_nbunch, opt_weight) {
-    var nodes_nbrs;
-
-    if(!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nbrs = jsnx.helper.zip(jsnx.helper.iteritems(this['succ']),
-                                     jsnx.helper.iteritems(this['pred']));
-    }
-    else {
-        nodes_nbrs = jsnx.helper.zip(
-            goog.iter.map(this.nbunch_iter(opt_nbunch), function(n) {
-                return [n, this['succ'][n]];
-            }, this),
-            goog.iter.map(this.nbunch_iter(opt_nbunch), function(n) {
-                return [n, this['pred'][n]];
-            }, this)
-        );
-    }
-
-    if(!goog.isDefAndNotNull(opt_weight)) {
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var indeg = 0,
-                outdeg = 0;
-
-            goog.object.forEach(nd[1][1], function(data) {
-                indeg += jsnx.helper.len(data);
-            });
-            goog.object.forEach(nd[0][1], function(data) {
-                outdeg += jsnx.helper.len(data);
-            });
-
-            return [nd[0][0], indeg + outdeg];
-        });
-    }
-    else {
-        // edge weighted graph - degree is sum of nbr edge weights
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var succ = nd[0][1],
-                pred = nd[1][1],
-                sum = 0;
-
-            goog.object.forEach(pred, function(data) {
-                goog.object.forEach(data, function(d) {
-                    sum += +goog.object.get(d, opt_weight, 1);
-                });
-            });
-            goog.object.forEach(succ, function(data) {
-                goog.object.forEach(data, function(d) {
-                    sum += +goog.object.get(d, opt_weight, 1);
-                });
-            });
-
-            return [nd[0][0], sum];
-        });
-    }
-};
-
+jsnx.classes.MultiDiGraph.prototype.degree_iter = jsnx.classes.DiGraph.prototype.degree_iter;
 
 /**
  * Return an iterator for (node, in-degree).
@@ -511,42 +507,7 @@ jsnx.classes.MultiDiGraph.prototype.degree_iter = function(opt_nbunch, opt_weigh
  * @override
  * @export
  */
-jsnx.classes.MultiDiGraph.prototype.in_degree_iter = function(opt_nbunch, opt_weight) {
-    var nodes_nbrs;
-
-    if(!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nbrs = jsnx.helper.iteritems(this['pred']);
-    }
-    else {
-        nodes_nbrs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['pred'][n]];
-        }, this);
-    }
-
-    if(!goog.isDefAndNotNull(opt_weight)) {
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var sum = 0;
-            goog.object.forEach(nd[1], function(data) {
-                sum += goog.object.getCount(data);
-            });
-            return [nd[0], sum];
-        });
-    }
-    else {
-        // edge weighted graph - degree is sum of nbr edge weights
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var sum = 0;
-
-            goog.object.forEach(nd[1], function(data) {
-                goog.object.forEach(data, function(d) {
-                    sum += +goog.object.get(d, opt_weight, 1);
-                });
-            });
-
-            return [nd[0][0], sum];
-        });
-    }
-};
+jsnx.classes.MultiDiGraph.prototype.in_degree_iter = jsnx.classes.DiGraph.prototype.id_degree_iter;
 
 
 /**
@@ -578,43 +539,7 @@ jsnx.classes.MultiDiGraph.prototype.in_degree_iter = function(opt_nbunch, opt_we
  * @override
  * @export
  */
-jsnx.classes.MultiDiGraph.prototype.out_degree_iter = function(opt_nbunch, opt_weight) {
-    var nodes_nbrs;
-
-    if(!goog.isDefAndNotNull(opt_nbunch)) {
-        nodes_nbrs = jsnx.helper.iteritems(this['succ']);
-    }
-    else {
-        nodes_nbrs = jsnx.helper.map(this.nbunch_iter(opt_nbunch), function(n) {
-            return [n, this['succ'][n]];
-        }, this);
-    }
-
-    if(!goog.isDefAndNotNull(opt_weight)) {
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var sum = 0;
-            goog.object.forEach(nd[1], function(data) {
-                sum += goog.object.getCount(data);
-            });
-            return [nd[0], sum];
-        });
-    }
-    else {
-        // edge weighted graph - degree is sum of nbr edge weights
-        return jsnx.helper.map(nodes_nbrs, function(nd) {
-            var sum = 0;
-
-            goog.object.forEach(nd[1], function(data) {
-                goog.object.forEach(data, function(d) {
-                    sum += +goog.object.get(d, opt_weight, 1);
-                });
-            });
-
-            return [nd[0][0], sum];
-        });
-    }
-};
-
+jsnx.classes.MultiDiGraph.prototype.out_degree_iter = jsnx.classes.DiGraph.prototype.out_degree_iter;
 
 /**
  * Return True if graph is a multigraph, False otherwise.
@@ -705,39 +630,29 @@ jsnx.classes.MultiDiGraph.prototype.to_directed = function() {
  */
 jsnx.classes.MultiDiGraph.prototype.to_undirected = function(opt_reciprocal) {
     var H = new jsnx.classes.MultiGraph();
-    H.name(this.name());
-    H.add_nodes_from(this);
+    H.graph_ = jsnx.helper.deepcopy(this.graph_);
+    // H.name(this.name()); // this is redundant
+    H.add_nodes_from(this.nodes_iter(true));
 
     var self = this,
         u, v;
 
     if(opt_reciprocal) {
-        H.add_edges_from(jsnx.helper.nested_chain(this.adjacency_iter(), function(nd) {
-            u = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrd) {
-            v = nbrd[0];
-            return jsnx.helper.iteritems(nbrd[1]);
-        }, function(keydictd) {
-            if(self.has_edge(v, u, keydictd[0])) {
-                return [u, v, keydictd[0], jsnx.helper.deepcopy(keydictd[1])];
-            }
-        }));
+        goog.iter.forEach(this.edges_iter(null, true, true), 
+                function(entry) {
+                    if (self.has_edge(entry[0], entry[1], entry[2])){
+                        N.add_edge_(entry[0],entry[1], entry[2],
+                                jsnx.helper.deepcopy(entry[3]));
+                    }});
     }
     else {
-        H.add_edges_from(jsnx.helper.nested_chain(this.adjacency_iter(), function(nd) {
-            u = nd[0];
-            return jsnx.helper.iteritems(nd[1]);
-        }, function(nbrd) {
-            v = nbrd[0];
-            return jsnx.helper.iteritems(nbrd[1]);
-        }, function(keydictd) {
-            return [u, v, keydictd[0], jsnx.helper.deepcopy(keydictd[1])];
+        H.add_edges_from(goog.iter.map(this.edges_iter(null,true,true), 
+                function(entry) {
+                    return [entry[0],entry[1], entry[2],
+                            jsnx.helper.deepcopy(entry[3])];
         }));
     }
-
-    H['graph'] = jsnx.helper.deepcopy(this['graph']);
-    H['node'] = jsnx.helper.deepcopy(this['node']);
+    
     return H;
 };
 
@@ -775,34 +690,34 @@ jsnx.classes.MultiDiGraph.prototype.to_undirected = function(opt_reciprocal) {
 jsnx.classes.MultiDiGraph.prototype.subgraph = function(nbunch) {
     var bunch = this.nbunch_iter(nbunch);
     // create new graph and copy subgraph into it
-    var H = new this.constructor(),
+    var self = this,
+        H = new this.constructor(null,this.graph_),
         // namespace shortcuts for speed
-        H_succ = H['succ'],
-        H_pred = H['pred'],
-        this_succ = this['succ'];
+        H_succ = H.succ_,
+        H_pred = H.pred_,
+        this_succ = this.succ_;
 
-    // add nodes
-    goog.iter.forEach(bunch, function(n) {
-        H_succ[n] = {};
-        H_pred[n] = {};
-    });
     // add edges
-    jsnx.helper.forEach(H_succ, function(u) {
-        var Hnbrs = H_succ[u];
-        goog.object.forEach(this_succ[u], function(edgedict, v) {
-            if(goog.object.containsKey(H_succ,v)) {
+    jsnx.helper.forEach(bunch, function(u) {
+        var Hnbrs = H.newNodeMap_(); 
+        H_succ.set(u, Hnbrs);
+        goog.iter.forEach(this_succ.get(u).getEntryIterator(),
+            function(entry) {
+            var v = entry[0], edgedict = entry[1];
+            if(H_succ.containsKey(v)) {
                 // add both representations of edge: u-v and v-u
                 // they share the same edgedict
-                var ed = goog.object.clone(edgedict);
-                Hnbrs[v] = ed;
-                H_pred[v][u] = ed;
+                var ed = edgedict.clone();
+                Hnbrs.set(v, ed);
+                H_pred.get(v).set(u, ed);
             }
         });
     });
-    jsnx.helper.forEach(H, function(n) {
-        H['node'][n] = this['node'][n];
-    }, this);
-    H['graph'] = this['graph'];
+    // add nodes
+    goog.iter.forEach(bunch, function(n) {
+        H.add_node_(n,self.node(n));
+    });
+
     return H;
 };
 
@@ -827,21 +742,20 @@ jsnx.classes.MultiDiGraph.prototype.reverse = function(opt_copy) {
     var H;
 
     if(opt_copy) {
-        H = new this.constructor(null, {name: 'Reverse of (' + this.name() + ')'});
-        H.add_nodes_from(this);
+        H = new this.constructor(null, this.graph_);
+        H.name('Reverse of (' + this.name() + ')');
+        H.add_nodes_from(this.nodes_iter(true));
         H.add_edges_from(goog.iter.map(this.edges_iter(true, true), function(ed) {
             return [ed[1], ed[0], ed[2], jsnx.helper.deepcopy(ed[3])];
         }));
-        H['graph'] = jsnx.helper.deepcopy(this['graph']);
-        H['node'] = jsnx.helper.deepcopy(this['node']);
     }
     else {
-        var this_pred = this['pred'],
-            this_succ = this['succ'];
+        var this_pred = this.pred_,
+            this_succ = this.succ_;
 
-        this['succ'] = this_pred;
-        this['pred'] = this_succ;
-        this['adj'] = this['succ'];
+        this.succ_ = this_pred;
+        this.pred_ = this_succ;
+        this.adj_ = this.succ_;
         H = this;
     }
     return H;

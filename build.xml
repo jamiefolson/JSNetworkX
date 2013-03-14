@@ -13,7 +13,7 @@
     <property name="docs" location="docs" />
     <property name="tools" location="tools" />
 
-    <property name="testing" value="false" />
+    <property name="testing" value="true" />
     <property name="generators" value="true" />
     <property name="algorithms" value="true" />
     <property name="compiled" value="0" />

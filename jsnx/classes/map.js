@@ -26,7 +26,6 @@
 
 goog.provide('jsnx.classes.Map');
 
-goog.provide('goog.structs.Map');
 goog.require('goog.iter.Iterator');
 goog.require('goog.iter.StopIteration');
 goog.require('goog.object');
@@ -50,12 +49,9 @@ goog.exportSymbol('jsnx.Map.Entry', jsnx.classes.Map.Entry);
  * 
  * @param {*=}
  *            opt_map Map or Object to initialize the map with.
- * @param {...*}
- *            var_args If 2 or more arguments are present then they will be used
- *            as key-value pairs.
  * @constructor
  */
-jsnx.classes.Map = function(opt_map, var_args) {
+jsnx.classes.Map = function(map_opts) {
 
     
     /**
@@ -83,18 +79,14 @@ jsnx.classes.Map = function(opt_map, var_args) {
      */
     this.keys_ = /* Array*/ [];
 
-    var argLength = arguments.length;
+    this.opts_ = {'equality' : 'hash'};
 
-    if (argLength > 1) {
-        if (argLength % 2) {
-            throw Error('Uneven number of arguments');
+    if (map_opts) {
+        if (map_opts instanceof jsnx.classes.Map){
+            this.opts_.extend(opt_map.opts_);
+        }else {
+            this.opts_.extend(opt_map);
         }
-        for ( var i = 0; i < argLength; i += 2) {
-            this.set(arguments[i], arguments[i + 1]);
-        }
-    } else if (opt_map) {
-        this.addAll(/** @type {Object} */
-        (opt_map));
     }
 };
 goog.exportSymbol('jsnx.Map', jsnx.classes.Map);
@@ -163,7 +155,7 @@ jsnx.classes.Map.prototype.getKeys = function() {
  * @return {boolean} Whether the map contains the key.
  */
 jsnx.classes.Map.prototype.containsKey = function(key) {
-    return jsnx.classes.Map.hasKey_(this.map_, key);
+    return this.hasKey_(this.map_, key);
 };
 
 /**
@@ -181,8 +173,8 @@ jsnx.classes.Map.prototype.containsValue = function(val) {
         }
     }
         return false;*/
-    return goog.iter.some(this.getEntryIterator(),
-            function(entry){ return entry.value === val;});
+    return goog.iter.some(this.getValueIterator(),
+            function(other){ return other === val;});
 };
 
 /**
@@ -217,18 +209,7 @@ jsnx.classes.Map.prototype.equals = function(otherMap, opt_equalityFn) {
     return true;
 };
 
-/**
- * Default equality test for values.
- * 
- * @param {*}
- *            a The first value.
- * @param {*}
- *            b The second value.
- * @return {boolean} Whether a and b reference the same object.
- */
-jsnx.classes.Map.identityTest = function(a, b) {
-    return a === b;
-};
+
 
 /**
  * @return {boolean} Whether the map is empty.
@@ -257,10 +238,10 @@ jsnx.classes.Map.prototype.clear = function() {
  * @return {boolean} Whether object was removed.
  */
 jsnx.classes.Map.prototype.remove = function(key) {
-    return jsnx.classes.Map.remove(this.map_,key);
+    return this.remove_(this.map_,key);
 };
 
-jsnx.classes.Map.remove = function(obj,key) {
+jsnx.classes.Map.prototype.remove_ = function(obj,key) {
     if (jsnx.classes.Map.hasKey_(obj, key)) {
         var hash = this.keyHash(key);
         var idx = goog.array.findIndex(obj[hash],
@@ -292,7 +273,7 @@ jsnx.classes.Map.prototype.cleanupKeysArray_ = function() {
         var destIndex = 0;
         while (srcIndex < this.keys_.length) {
             var key = this.keys_[srcIndex];
-            if (jsnx.classes.Map.hasKey_(this.map_, key)) {
+            if (this.hasKey_(this.map_, key)) {
                 this.keys_[destIndex++] = key;
             }
             srcIndex++;
@@ -314,9 +295,9 @@ jsnx.classes.Map.prototype.cleanupKeysArray_ = function() {
         var destIndex = 0;
         while (srcIndex < this.keys_.length) {
             var key = this.keys_[srcIndex];
-            if (!(jsnx.classes.Map.hasKey_(seen, key))) {
+            if (!(this.hasKey_(seen, key))) {
                 this.keys_[destIndex++] = key;
-                jsnx.classes.Map.set_(seen,key,1);
+                this.set_(seen,key,1);
             }
             srcIndex++;
         }
@@ -341,10 +322,11 @@ jsnx.classes.Map.prototype.get = function(key, opt_val) {
     return jsnx.classes.Map.get_(this.map_,key,opt_val);
 };
 
-jsnx.classes.Map.get_ = function(obj,key,opt_val){
+jsnx.classes.Map.prototype.get_ = function(obj,key,opt_val){
     if (jsnx.classes.Map.hasKey_(obj, key)) {
+        var isEqual = this.getEqualityTest(key);
         var entry = goog.array.find(obj[this.keyHash(key)],
-                jsnx.classes.Map.getKeyEqualityTest(key));
+                function(entry){return isEqual(entry.key);});
         return entry == null ? null : entry.value;
     }
     return opt_val;
@@ -360,7 +342,7 @@ jsnx.classes.Map.get_ = function(obj,key,opt_val){
  * @return {*} Some subclasses return a value.
  */
 jsnx.classes.Map.prototype.set = function(key, value) {
-    if (jsnx.classes.Map.set_(this.map_,key,value)){
+    if (this.set_(this.map_,key,value)){
         this.keys_.push(key);
         // Only change the version if we add a new key.
         this.count_++;
@@ -379,9 +361,9 @@ jsnx.classes.Map.prototype.set = function(key, value) {
  *            value The value to add.
  * @return {boolean} Whether or not the key's hash existed in the object.
  */
-jsnx.classes.Map.set_ = function(obj,key, value) {
+jsnx.classes.Map.prototype.set_ = function(obj,key, value) {
     var entry = new jsnx.classes.Map.Entry(key,value);
-    if (jsnx.classes.Map.hasKey_(obj, key)) {
+    if (this.hasKey_(obj, key)) {
         obj[key].push(entry);
         return false;
     }else {
@@ -418,7 +400,9 @@ jsnx.classes.Map.prototype.addAll = function(map) {
  * @return {!jsnx.classes.Map} A new map with the same key-value pairs.
  */
 jsnx.classes.Map.prototype.clone = function() {
-    return new jsnx.classes.Map(this);
+    var map = new jsnx.classes.Map(this);
+    map.addAll(this);
+    return map;
 };
 
 /**
@@ -553,16 +537,24 @@ jsnx.classes.Map.prototype.__iterator__ = function(opt_type) {
 /**
  * Safe way to test for hasOwnProperty.  It even allows testing for
  * 'hasOwnProperty'.
- * @param {Object} obj The object to test for presence of the given key.
+ * @param {Object.<string,Array.<jsnx.classes.Map.Entry>>} obj 
+ *              The object to test for presence of the given key.
  * @param {*} key The key to check for.
  * @return {boolean} Whether the object has the key.
  * @private
  */
-jsnx.classes.Map.hasKey_ = function(obj, key) {
+jsnx.classes.Map.prototype.hasKey_ = function(obj, key) {
+    var equality_type = this.opts_['equality'];
+
     var hash = this.keyHash(key);
     if (Object.prototype.hasOwnProperty.call(obj, hash)){
-        if (goog.array.some(obj[hash],jsnx.classes.Map.getKeyEqualityTest(key),key)){
+        if (equality_type === 'hash'){ // handle hash equality here
+            return goog.isDefAndNotNull(obj[hash]) && obj[hash].length > 0;
+        }else { // handle any other equality in getEqualityTest
+        var isEqual = this.getEqualityTest(key);
+        if (goog.array.some(obj[hash],function(entry){return isEqual(entry.key);})){
             return true;
+        }
         }
     }
     return false;
@@ -575,26 +567,47 @@ jsnx.classes.Map.hasKey_ = function(obj, key) {
  * @return {string} string hash
  * @export
  */
-jsnx.classes.Map.prototype.keyHash = jsnx.classes.Map.keyHash_; 
-
-/**
- * Retrieve a hash key for an object
- * @param {*} value to hash
- * @return {string} string hash
- * @private
- */
-jsnx.classes.Map.keyHash_ = function (val){
+jsnx.classes.Map.prototype.keyHash = function (val){
     var hash = "";
+    // Always use an object-oriented hash if it's defined
     if (goog.object.containsKey(val, "hash")) {
         if (typeof val['hash'] === "function"){
             hash = val['hash']();
         }else {
             hash = ""+val['hash'];
         }
+    }else if (goog.object.containsKey(this.opts_,"hash")){
+        // Otherwise use a custom hash-function defined for the map
+        // Precedence for these two should maybe be reversed
+        hash = this.opts_['hash'](val);
     }else {
-        hash = ""+val;
+        // for identity equality, hash for objects is a unique id, not "[object Object]"
+        if (this.opts_['equality'] === 'identity' 
+            // but only for objects
+            // this could short-circuit for some conditions, but probably slows down more
+            //&& typeof val === "object"   
+            // and only "real" objects, not boxed primitives
+            && Object.prototype.toString.call(val) === "[object Object]"){ 
+            hash = goog.getUid(val);
+        }else {
+            // default to the object's toString() if nothing else
+            hash = ""+val;
+        }
     }
     return hash;
+};
+
+/**
+ * Default equality test for values.
+ * 
+ * @param {*}
+ *            a The first value.
+ * @param {*}
+ *            b The second value.
+ * @return {boolean} Whether a and b reference the same object.
+ */
+jsnx.classes.Map.identityTest = function(a, b) {
+    return a === b;
 };
 
 /**
@@ -612,7 +625,7 @@ jsnx.classes.Map.customEqualityTest = function(val,other){
  * Make an equality comparison using val.equals function
  * @param {*} val Value to do compare
  * @param {*} other Value to be compared
- * @return {boolean} Whether the objects are equal
+ * @return {function} Function to test whether an object is equal to val
  * 
  */
 jsnx.classes.Map.getCustomEqualityTest = function(val){
@@ -629,22 +642,7 @@ jsnx.classes.Map.getCustomEqualityTest = function(val){
  * 
  */
 jsnx.classes.Map.structEqualityTest = function(val,other){
-    var valkeys = goog.object.createSet(goog.object.getKeys(val));
-    for (var key in goog.object.getKeys(other)) {
-        if (!goog.object.containsKey(valkeys,key)){
-            return false;
-        }
-        delete valkeys[key];
-        var thisval = val[key], otherval = other[key]; 
-        if (!((thisval === otherval) ||
-                typeof thisval === "object" && equalityTest(thisval,otherval))){
-            return false;
-        }
-    }
-    if (!goog.object.isEmpty(valkeys)){
-        return false;
-    }
-    return true;
+    return getStructEqualityTest(val)(other);
 };
 
 /**
@@ -682,32 +680,15 @@ jsnx.classes.Map.getStructEqualityTest = function(val){
  * @return {function} Function to compute whether the objects are equal
  * 
  */
-jsnx.classes.Map.getEqualityTest = function (val){
+jsnx.classes.Map.prototype.getEqualityTest = function (val){
+    
     if (goog.object.containsKey(val, 'equals')) {
         if (typeof val['equals'] === "function"){
-            return function(other){return jsnx.classes.Map.customEqualityTest(val,other);};
-        }
+            return return jsnx.classes.Map.getCustomEqualityTest(val);
+        };
     }
     if (typeof val === "object" && this.structCompare) {
-        return function(other){return jsnx.classes.Map.structEqualityTest(val,other);};
+        return jsnx.classes.Map.getStructEqualityTest(val);
     }
     return function(other){return jsnx.classes.Map.identityTest(val,other);};
-};
-
-
-/**
- * Get an function to test an entry's key for equality to val
- * @param {*} value to do compare
- * @return {function} Function to compute whether the objects are equal
- * 
- */
-jsnx.classes.Map.getKeyEqualityTest = function (val){
-    if (goog.object.containsKey(val, "equals")) {
-        if (typeof val['equals'] === "function"){
-            return function(other){return (other == null ? false : 
-                jsnx.classes.Map.customEqualityTest(val,other));};
-        }
-    }
-    return function(other){return (other == null ? false : 
-        jsnx.classes.Map.defaultIdentityTest(val,other.key));};;
 };
